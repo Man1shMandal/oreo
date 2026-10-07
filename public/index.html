@@ -40,8 +40,10 @@
     </main>
     <script type="module">
       import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-      const config = await fetch('/api/config').then(r => r.json());
-      const supabase = createClient(config.supabaseUrl, config.supabasePublishableKey);
+      const supabase = createClient(
+        'https://ahgbdtbmmwisqhulutgy.supabase.co',
+        'sb_publishable_U617jICHO8sjYDqQkDkBwA_kERO7BOC',
+      );
       const auth = document.querySelector('#auth'), chat = document.querySelector('#chat');
       const status = document.querySelector('#status'), answer = document.querySelector('#answer');
       const show = session => {
