@@ -38,12 +38,26 @@
     </main>
     <script type="module">
       import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-      const supabase = createClient(
-        'https://ahgbdtbmmwisqhulutgy.supabase.co',
-        'sb_publishable_U617jICHO8sjYDqQkDkBwA_kERO7BOC',
-      );
       const auth = document.querySelector('#auth'), chat = document.querySelector('#chat');
       const status = document.querySelector('#status'), answer = document.querySelector('#answer');
+      let supabase;
+      try {
+        const response = await fetch('/api/config');
+        if (!response.ok) throw new Error('Oreo could not load its sign-in settings.');
+        const config = await response.json();
+        if (!config.supabaseUrl || !config.supabasePublishableKey) throw new Error('Oreo sign-in is not configured yet.');
+        supabase = createClient(config.supabaseUrl, config.supabasePublishableKey);
+      } catch (error) {
+        status.textContent = error.message;
+        document.querySelector('#google').disabled = true;
+        throw error;
+      }
+      const callbackError = new URLSearchParams(window.location.hash.slice(1)).get('error_description')
+        || new URLSearchParams(window.location.search).get('error_description');
+      if (callbackError) {
+        status.textContent = callbackError;
+        history.replaceState(null, '', window.location.pathname);
+      }
       const show = session => {
         auth.classList.toggle('hidden', !!session); chat.classList.toggle('hidden', !session);
         document.querySelector('#who').textContent = session ? session.user.email : '';
@@ -58,10 +72,22 @@
       document.querySelector('#sign-out').onclick = () => supabase.auth.signOut();
       document.querySelector('#send').onclick = async () => {
         const message = document.querySelector('#message').value.trim(); if (!message) return;
+        const send = document.querySelector('#send');
+        send.disabled = true;
         status.textContent = 'thinking…'; answer.textContent = '';
-        const { data: { session } } = await supabase.auth.getSession();
-        const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ message }) });
-        const data = await response.json(); status.textContent = data.error || ''; answer.textContent = data.reply || '';
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) throw new Error('Please sign in again.');
+          const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ message }) });
+          const data = await response.json();
+          if (!response.ok || data.error) throw new Error(data.error || 'Oreo could not answer. Try again shortly.');
+          if (typeof data.reply !== 'string') throw new Error('Oreo returned an unexpected response.');
+          status.textContent = ''; answer.textContent = data.reply;
+        } catch (error) {
+          status.textContent = error.message;
+        } finally {
+          send.disabled = false;
+        }
       };
     </script>
   </body>

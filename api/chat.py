@@ -30,8 +30,14 @@ class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0 or length > 30000:
+                self.reply(400, {"error": "Send a valid message under 6,000 characters."})
+                return
             payload = json.loads(self.rfile.read(length))
-            message = str(payload.get("message", "")).strip()
+            if not isinstance(payload, dict) or not isinstance(payload.get("message"), str):
+                self.reply(400, {"error": "Send a text message."})
+                return
+            message = payload["message"].strip()
             if not message or len(message) > 6000:
                 self.reply(400, {"error": "Send a message under 6,000 characters."})
                 return
@@ -42,10 +48,16 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             publishable_key = os.environ["SUPABASE_PUBLISHABLE_KEY"]
-            user = request_json(
-                f"{SUPABASE_URL}/auth/v1/user",
-                {"apikey": publishable_key, "Authorization": f"Bearer {token}"},
-            )
+            try:
+                user = request_json(
+                    f"{SUPABASE_URL}/auth/v1/user",
+                    {"apikey": publishable_key, "Authorization": f"Bearer {token}"},
+                )
+            except urllib.error.HTTPError as error:
+                if error.code in (401, 403):
+                    self.reply(401, {"error": "Your sign-in has expired. Please sign in again."})
+                    return
+                raise
             service_key = os.environ["SUPABASE_SECRET_KEY"]
             profiles = request_json(
                 f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user['id']}&select=approved",
@@ -66,7 +78,7 @@ class handler(BaseHTTPRequestHandler):
                 temperature=0.7,
             )
             self.reply(200, {"reply": completion.choices[0].message.content or "No reply returned."})
-        except urllib.error.HTTPError:
-            self.reply(401, {"error": "Your sign-in has expired. Please sign in again."})
+        except (ValueError, UnicodeDecodeError):
+            self.reply(400, {"error": "Send a valid JSON message."})
         except Exception:
             self.reply(500, {"error": "Oreo is unavailable right now. Try again shortly."})
