@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Personal AI — mockup</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #262624; --side: #1f1e1d; --soft: #30302e; --line: #3a3936;
+    --text: #ece9e1; --muted: #9c9a92; --accent: #d97757;
+    --serif: "Tiempos Headline", "Iowan Old Style", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; height: 100vh; display: flex; background: var(--bg); color: var(--text);
+         font: 15.5px/1.65 -apple-system, "SF Pro Text", Inter, sans-serif; }
+  button, select, textarea { font: inherit; color: inherit; }
+
+  /* sidebar */
+  aside { width: 250px; background: var(--side); display: flex; flex-direction: column; padding: 14px 10px; border-right: 1px solid #2b2a28; }
+  .brand { font-family: var(--serif); font-size: 19px; padding: 2px 10px 14px; }
+  .brand b { color: var(--accent); font-weight: 400; }
+  .new { display: flex; align-items: center; gap: 8px; text-align: left; padding: 7px 10px; border-radius: 8px; border: 0; background: none; cursor: pointer; }
+  .new i { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; font-style: normal; font-size: 15px; }
+  .new:hover { background: var(--soft); }
+  .list { flex: 1; overflow: auto; margin-top: 14px; }
+  .when { font-size: 12px; color: var(--muted); margin: 14px 10px 4px; }
+  .chat { padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #cfccc4; }
+  .chat:hover, .chat.on { background: var(--soft); color: var(--text); }
+  .foot { padding: 10px; font-size: 12px; color: var(--muted); }
+  .bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 6px; }
+  .bar i { display: block; height: 100%; width: 38%; background: var(--accent); border-radius: 2px; }
+
+  /* main */
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .view { display: none; flex: 1; flex-direction: column; min-height: 0; }
+  .view.on { display: flex; }
+
+  /* empty / home */
+  #home { justify-content: center; align-items: center; padding-bottom: 12vh; }
+  .hello { font-family: var(--serif); font-size: 38px; font-weight: 400; margin: 0 0 26px; display: flex; align-items: center; gap: 14px; }
+  .spark { color: var(--accent); font-size: 32px; }
+  #home .box { width: min(680px, 90%); }
+  .chips { display: flex; gap: 8px; margin-top: 14px; justify-content: center; flex-wrap: wrap; }
+  .chips span { border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; font-size: 13px; color: #cfccc4; cursor: pointer; }
+  .chips span:hover { background: var(--soft); }
+
+  /* conversation */
+  .msgs { flex: 1; overflow: auto; padding: 36px 0 20px; }
+  .msg { max-width: 720px; margin: 0 auto 26px; padding: 0 24px; }
+  .user { display: flex; justify-content: flex-end; }
+  .user div { background: #141413; padding: 9px 15px; border-radius: 14px; max-width: 80%; }
+  .ai { font-family: var(--serif); font-size: 16.5px; }
+  .ai p { margin: 0 0 12px; }
+  .by { font-family: -apple-system, sans-serif; font-size: 12px; color: var(--muted); display: flex; gap: 14px; }
+  .by span { cursor: pointer; }
+  code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: var(--soft); padding: 1px 5px; border-radius: 4px; }
+  .code { background: #1a1a19; border: 1px solid var(--line); border-radius: 10px; margin: 12px 0; overflow: hidden; font-family: -apple-system, sans-serif; }
+  .code .top { display: flex; justify-content: space-between; padding: 6px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .code .top span:last-child { cursor: pointer; }
+  .code pre { margin: 0; padding: 12px 14px; overflow: auto; font: 13px/1.6 "SF Mono", Menlo, monospace; }
+  .k { color: #d9a07a; } .f { color: #9fb8e0; } .s { color: #b5c98e; } .c { color: #75736c; }
+  .composer { padding: 0 24px 22px; }
+  .composer .box { max-width: 720px; margin: 0 auto; }
+
+  /* input box */
+  .box { background: #30302e; border: 1px solid var(--line); border-radius: 18px; padding: 14px 14px 10px; box-shadow: 0 4px 20px rgba(0,0,0,.18); }
+  .box textarea { width: 100%; height: 50px; background: none; border: 0; outline: none; resize: none; }
+  .row { display: flex; align-items: center; gap: 4px; position: relative; }
+  .ghost { background: none; border: 1px solid var(--line); color: var(--muted); padding: 3px 9px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .ghost:hover { background: var(--soft); color: var(--text); }
+  select.ghost { appearance: none; border: 0; margin-left: auto; }
+  .send { width: 32px; height: 32px; border-radius: 9px; border: 0; background: var(--accent); color: #fff; cursor: pointer; font-size: 16px; }
+
+  .pop { display: none; position: absolute; bottom: 44px; left: 0; width: 290px; background: var(--side); border: 1px solid var(--line);
+         border-radius: 12px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.45); font-size: 13px; z-index: 5; }
+  .pop.on { display: block; }
+  .pop label { display: flex; justify-content: space-between; color: var(--muted); margin: 10px 0 4px; }
+  .pop label:first-child { margin-top: 0; }
+  .pop input[type=range] { width: 100%; accent-color: var(--accent); }
+  .pop textarea { width: 100%; height: 60px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; resize: none; }
+
+  .note { position: fixed; top: 10px; right: 14px; font-size: 11px; color: var(--muted); }
+  .note a { color: var(--accent); cursor: pointer; }
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="brand">Manish's <b>AI</b></div>
+  <button class="new" onclick="show('home')"><i>+</i> New chat</button>
+  <div class="list">
+    <div class="when">Recents</div>
+    <div class="chat on" onclick="show('conv')">ESP32 MQTT reconnect bug</div>
+    <div class="chat">IEEE MYOSA abstract draft</div>
+    <div class="chat">TinyML model size ideas</div>
+    <div class="chat">Explain Kalman filters</div>
+    <div class="chat">Timetable clash checker</div>
+  </div>
+  <div class="foot">
+    7.6M of 20M tokens this month
+    <div class="bar"><i></i></div>
+  </div>
+</aside>
+
+<main>
+  <!-- HOME -->
+  <section class="view on" id="home">
+    <h1 class="hello"><span class="spark">✳</span> Good evening, Manish</h1>
+    <div class="box">
+      <textarea placeholder="How can I help you today?"></textarea>
+      <div class="row">
+        <button class="ghost" title="Attach">＋</button>
+        <button class="ghost" onclick="this.parentNode.querySelector('.pop').classList.toggle('on')" title="Settings">⚙︎</button>
+        <div class="pop">
+          <label>System prompt</label>
+          <textarea placeholder="Optional"></textarea>
+          <label>Temperature <span>0.7</span></label>
+          <input type="range" min="0" max="2" step="0.1" value="0.7" oninput="this.previousElementSibling.lastChild.textContent=this.value">
+          <label>Max length <span>4096</span></label>
+          <input type="range" min="256" max="8192" step="256" value="4096" oninput="this.previousElementSibling.lastChild.textContent=this.value">
+        </div>
+        <select class="ghost">
+          <option>Opus 5.5</option><option>Sonnet 5</option><option selected>Sonnet 4.6</option><option>Haiku 4.5</option>
+          <option>GPT-6 Luna</option><option>Gemini 3.8 Flash</option>
+        </select>
+        <button class="send" onclick="show('conv')">↑</button>
+      </div>
+    </div>
+    <div class="chips"><span>‹/› Code</span><span>✎ Write</span><span>⌕ Learn</span><span>☕ Life stuff</span></div>
+  </section>
+
+  <!-- CONVERSATION -->
+  <section class="view" id="conv">
+    <div class="msgs">
+      <div class="msg user"><div>My ESP32 drops MQTT every ~10 min and never reconnects. What's wrong with my loop()?</div></div>
+      <div class="msg ai">
+        <p>Your <code>loop()</code> calls <code>client.loop()</code> but never checks <code>client.connected()</code>, so once the broker drops you, nothing reconnects. Add a non-blocking retry:</p>
+        <div class="code">
+          <div class="top"><span>cpp</span><span>Copy</span></div>
+<pre><span class="k">void</span> <span class="f">loop</span>() {
+  <span class="k">if</span> (!client.<span class="f">connected</span>() &amp;&amp; <span class="f">millis</span>() - lastTry &gt; <span class="s">5000</span>) {
+    lastTry = <span class="f">millis</span>();
+    <span class="f">reconnect</span>();   <span class="c">// re-subscribe inside here</span>
+  }
+  client.<span class="f">loop</span>();
+}</pre>
+        </div>
+        <p>Also raise the keep-alive with <code>client.setKeepAlive(60)</code>. The default 15 s is tight on flaky Wi-Fi.</p>
+        <div class="by"><span>Copy</span><span>Retry</span><span style="margin-left:auto;cursor:default">Sonnet 4.6</span></div>
+      </div>
+    </div>
+    <div class="composer">
+      <div class="box">
+        <textarea placeholder="Reply…"></textarea>
+        <div class="row">
+          <button class="ghost">＋</button><button class="ghost">⚙︎</button>
+          <select class="ghost"><option>Sonnet 4.6</option><option>Opus 5.5</option><option>GPT-6 Luna</option><option>Gemini 3.8 Flash</option></select>
+          <button class="send">↑</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="note">mockup · <a onclick="show('home')">home</a> · <a onclick="show('conv')">chat</a></div>
+<script>
+  function show(id) { document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === id)); }
+</script>
+</body>
+</html>

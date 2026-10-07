@@ -1,0 +1,4 @@
+#!/bin/sh
+# Launcher: runs Oreo with its own virtualenv from any directory.
+DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
+PYTHONPATH="$DIR" exec "$DIR/.venv/bin/python" -m oreo "$@"
