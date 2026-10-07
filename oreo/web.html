@@ -120,7 +120,7 @@
       <textarea id="input" rows="1" placeholder="Message Oreo" autofocus></textarea>
       <button id="send" type="submit" title="Send (Enter)">↑</button>
     </div>
-    <div class="hint">Enter to send · Shift+Enter for a new line · @path attaches a file</div>
+    <div class="hint">Enter to send · Shift+Enter for a new line · @path attaches a file (sent once; @ it again if needed later)</div>
   </form>
 </main>
 
@@ -133,6 +133,7 @@
   <div class="row">
     <div><label>Temperature (0–2)</label><input id="s-temp" type="number" min="0" max="2" step="0.1"></div>
     <div><label>Reply length (tokens)</label><input id="s-max" type="number" min="64" step="256"></div>
+    <div><label title="Chat history sent with each message; older turns become a short summary">Memory (tokens)</label><input id="s-ctx" type="number" min="200" step="250"></div>
   </div>
   <label>Instructions for every chat</label>
   <textarea id="s-instr" placeholder="e.g. I code in Python and C++; keep answers short."></textarea>
@@ -383,6 +384,7 @@ function openSettings(msg = "") {
   fillModels($("#s-model"), s.model);
   $("#s-temp").value = s.temperature;
   $("#s-max").value = s.max_tokens;
+  $("#s-ctx").value = s.context;
   $("#s-instr").value = s.instructions;
   $("#status").textContent = msg;
   $("#settings").showModal();
@@ -396,7 +398,7 @@ async function saveSettings() {
     const prevDefault = state.settings.model;
     state = await api("settings", {body: {
       model: $("#s-model").value, temperature: +$("#s-temp").value,
-      max_tokens: +$("#s-max").value, instructions: $("#s-instr").value,
+      max_tokens: +$("#s-max").value, context: +$("#s-ctx").value, instructions: $("#s-instr").value,
     }});
     if ($("#model").value === prevDefault) $("#model").value = state.settings.model;
     $("#settings").close();

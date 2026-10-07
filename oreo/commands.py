@@ -138,7 +138,7 @@ def ask_key(s):
 def _test(s):
     try:
         s.provider.client.chat.completions.create(
-            model=s.model, max_tokens=5, messages=[{"role": "user", "content": "hi"}])
+            model=s.model, max_tokens=1, messages=[{"role": "user", "content": "hi"}])
         d = s.provider.usage()
         s.out(f"  [green]connected[/] · {s.model} answered · {d['percentage']} of monthly tokens used")
     except Exception as e:
@@ -156,13 +156,14 @@ def _settings(s, arg):
             ("Default model", short),
             ("Temperature", st["temperature"]),
             ("Reply length", f"{st['max_tokens']} tokens"),
+            ("Memory", f"{st['context']} tokens of chat history per message"),
             ("Instructions", (instr[:40] + "…") if len(instr) > 40 else instr or "(none)"),
             ("Test connection", ""),
         ]
         s.out("\n  [bold]Settings[/]")
         for i, (name, val) in enumerate(rows, 1):
             s.out(f"  {i}  {name:<16} [dim]{val}[/]")
-        choice = s.input("\n  pick 1-6, Enter to go back: ")
+        choice = s.input("\n  pick 1-7, Enter to go back: ")
         if not choice:
             return
         if choice == "1":
@@ -181,11 +182,17 @@ def _settings(s, arg):
             try:
                 st["max_tokens"] = s.params["max_tokens"] = max(64, int(s.input("  tokens: ")))
             except ValueError:
-                s.out("  [red]enter a whole number like 4096[/]")
+                s.out("  [red]enter a whole number like 1024[/]")
         elif choice == "5":
+            s.out("  [dim]Less = cheaper. Older messages get folded into a short summary.[/]")
+            try:
+                st["context"] = max(200, int(s.input("  tokens: ")))
+            except ValueError:
+                s.out("  [red]enter a whole number like 1500[/]")
+        elif choice == "6":
             s.out("  [dim]Applies to every chat, e.g. 'I code in Python and C++; keep answers short.'[/]")
             st["instructions"] = s.input("  instructions: ", default=st["instructions"])
-        elif choice == "6":
+        elif choice == "7":
             _test(s)
             continue
         settings.save(st)
