@@ -286,6 +286,8 @@ class Handler(BaseHTTPRequestHandler):
             answer = {"role": "assistant", "content": reply}
             if sources:
                 answer["sources"] = [{"title": x["title"], "url": x["url"]} for x in sources]
+            if not reply.strip():
+                raise RuntimeError("the model sent back an empty reply, try again")
             chat.messages.append(answer)
             chat.save()
             event({"done": lean.footer(info, msgs, reply)})
