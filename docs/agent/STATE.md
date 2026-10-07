@@ -2,6 +2,12 @@
 
 ## Parallel release checkpoint — 2026-10-07
 
+Final prepared code commit: `d7ed931`, pushed to `release/hosted-v1` (not main).
+Final staged release: `dpl_CJgMFUH6pWxSrUEKtgP7T8xBbcgL`, READY at
+https://oreo-f23tmvvhq-man1shmandals-projects.vercel.app, with final no-store headers.
+The canonical Oreo Vercel alias serves this staged build. The established
+`web-ui-eta-nine.vercel.app` alias remains on the prior working public release.
+
 The user authorized completion, domain connection, deployment and sub-agents.
 Backend, frontend and verification agents completed their parts. This checkpoint
 supersedes conflicting deployment assumptions in the earlier snapshots below.
