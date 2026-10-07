@@ -7,6 +7,9 @@ The development flow is:
 3. Merge to main.
 4. Vercel deploys main to production; other branches receive preview deployments.
 
+The first hosted endpoint is /api/health. It verifies that the GitHub to Vercel
+release path works without exposing a model key or user data.
+
 The hosted app must not use the macOS Keychain, local chat files, Bonjour, or terminal tools.
 Use these services instead:
 
