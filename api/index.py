@@ -6,15 +6,18 @@ from urllib.parse import urlsplit
 from api.chat import handler as ChatHandler
 from api.config import handler as ConfigHandler
 from api.health import handler as HealthHandler
+from api.hosted import HostedHandler
 
 
-class handler(ChatHandler):
+class handler(ChatHandler, HostedHandler):
     def do_GET(self):
         path = urlsplit(self.path).path
         if path == "/api/health":
             HealthHandler.do_GET(self)
         elif path == "/api/config":
             ConfigHandler.do_GET(self)
+        elif path in ("/api/profile", "/api/conversations", "/api/admin"):
+            self.hosted_GET(path)
         elif path == "/":
             body = (Path(__file__).resolve().parent.parent / "public" / "index.html").read_bytes()
             self.send_response(200)
@@ -28,5 +31,7 @@ class handler(ChatHandler):
     def do_POST(self):
         if urlsplit(self.path).path == "/api/chat":
             super().do_POST()
+        elif urlsplit(self.path).path == "/api/admin":
+            self.admin_POST()
         else:
             self.reply(404, {"error": "Not found."})
