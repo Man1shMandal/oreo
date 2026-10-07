@@ -55,9 +55,11 @@ agent sandbox initially failed DNS; the same checks outside it succeeded.
 The actual oreo.research search returned five BBC results, with no DuckDuckGo
 challenge, and direct example.com reading returned 171 characters on this Mac.
 Hosted UI preferences previously defaulted web to false; /api/chat only
-researches when the request web flag is true. Changed the new-account default
-to web=true, so new chats search unless the user turns Web off. Existing saved
-preferences remain in effect, and the fewer-tokens preset still turns Web off.
-Hosted authenticated search from Vercel remains unverified; next step is
-reproducing in the signed-in app and checking hosted search/planner failures if
-needed. No automated tests run. Preserve existing unrelated work.
+researches when the request web flag is true. New-account default is web=true.
+Existing v1 browser preferences migrate to v2, preserving each setting while
+enabling web once; users can then turn it off and retain that choice. The
+fewer-tokens preset still turns Web off. Hosted authenticated search from
+Vercel remains unverified; next step is reproducing in the signed-in app and
+checking hosted search/planner failures if needed. Authenticated accounts share
+the same chat, files, settings, and research feature paths; no feature gate was
+found. No automated tests run.
