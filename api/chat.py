@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler
 
 from openai import OpenAI
 
-from api.conversations import MAX_OUTPUT, conversation_id, prepare, save_turn, acquire, release
+from api.conversations import MAX_OUTPUT, conversation_id, prepare, save_turn, acquire, release, activate_profile
 
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -69,19 +69,15 @@ class handler(BaseHTTPRequestHandler):
                     self.reply(401, {"error": "Your sign-in has expired. Please sign in again."})
                     return
                 raise
-            service_key = os.environ["SUPABASE_SECRET_KEY"]
-            profiles = request_json(
-                f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{user['id']}&select=approved",
-                {"apikey": service_key, "Authorization": f"Bearer {service_key}"},
-            )
-            if not profiles or not profiles[0]["approved"]:
-                self.reply(403, {"error": "Your account is waiting for approval."})
-                return
-
             user_id = user['id']
+            try:
+                activate_profile(user_id)
+            except LookupError as error:
+                self.reply(503, {'error': str(error)})
+                return
             lock = acquire(user_id)
             if lock.get('error'):
-                self.reply(409 if lock['error'] == 'busy' else 403, {'error': 'A reply is already in progress. Please wait.' if lock['error'] == 'busy' else 'Your account is waiting for approval.'})
+                self.reply(409 if lock['error'] == 'busy' else 503, {'error': 'A reply is already in progress. Please wait.' if lock['error'] == 'busy' else 'Oreo is unavailable right now. Try again shortly.'})
                 return
             lease = lock['lease']
             try:
@@ -92,7 +88,6 @@ class handler(BaseHTTPRequestHandler):
             if reservation.get("error"):
                 reason = reservation['error']
                 status, error = {
-                    "approval": (403, "Your account is waiting for approval."),
                     "conversation": (404, "Conversation not found."),
                     "limit": (429, "Your daily chat limit has been reached. Try again tomorrow (UTC)."),
                 }.get(reason, (503, "Oreo is unavailable right now."))

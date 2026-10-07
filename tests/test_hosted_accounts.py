@@ -4,9 +4,9 @@ import io
 import json
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
-from api.hosted import HostedHandler, is_admin
+from api.hosted import HostedHandler
 
 USER = '00000000-0000-0000-0000-000000000001'
 OTHER = '00000000-0000-0000-0000-000000000002'
@@ -27,10 +27,9 @@ class AccountTests(unittest.TestCase):
     def setUp(self):
         self.identity = patch('api.hosted.identity', return_value=(
             {'id': USER, 'email': 'user@example.test'},
-            {'id': USER, 'approved': True, 'daily_token_limit': 20000},
+            {'id': USER, 'daily_token_limit': 20000},
         )).start()
         self.database = patch('api.hosted.database', return_value=[]).start()
-        self.env = patch.dict(os.environ, {'ADMIN_EMAIL': 'admin@example.test'}).start()
         self.addCleanup(patch.stopall)
 
     def test_history_list_is_scoped_to_authenticated_owner(self):
@@ -46,55 +45,30 @@ class AccountTests(unittest.TestCase):
         self.assertEqual(self.database.call_count, 1)
         self.assertIn('user_id=eq.' + USER, self.database.call_args.args[0])
 
-    def test_pending_account_cannot_read_history(self):
-        self.identity.return_value[1]['approved'] = False
+    def test_signed_in_account_can_read_history(self):
         request = Request()
         request.hosted_GET('/api/conversations')
-        self.assertEqual(request.result[0], 403)
-        self.database.assert_not_called()
-
-    def test_non_admin_cannot_read_accounts(self):
-        request = Request()
-        request.hosted_GET('/api/admin')
-        self.assertEqual(request.result[0], 403)
-        self.database.assert_not_called()
-
-    def test_non_admin_cannot_approve_accounts(self):
-        request = Request(payload={'user_id': OTHER, 'approved': True})
-        request.admin_POST()
-        self.assertEqual(request.result[0], 403)
-        self.database.assert_not_called()
-
-    def test_admin_approval_writes_only_validated_fields(self):
-        self.identity.return_value[0]['email'] = 'admin@example.test'
-        self.database.side_effect = [[{'id': OTHER}], None]
-        request = Request(payload={'user_id': OTHER, 'approved': True,
-                                   'daily_token_limit': 1000, 'email': 'ignored@example.test'})
-        request.admin_POST()
         self.assertEqual(request.result[0], 200)
-        self.assertEqual(self.database.call_args.args, (
-            'profiles?id=eq.' + OTHER, 'PATCH', {'approved': True, 'daily_token_limit': 1000},
-        ))
-
-    def test_admin_rejects_boolean_or_out_of_range_limits(self):
-        self.identity.return_value[0]['email'] = 'admin@example.test'
-        for limit in [True, 0, -1, 1000001, '1000']:
-            with self.subTest(limit=limit):
-                request = Request(payload={'user_id': OTHER, 'approved': True, 'daily_token_limit': limit})
-                request.admin_POST()
-                self.assertEqual(request.result[0], 400)
-        self.database.assert_not_called()
-
-    def test_unconfigured_admin_email_never_grants_access(self):
-        with patch.dict(os.environ, {'ADMIN_EMAIL': ''}):
-            self.assertFalse(is_admin({'email': ''}))
 
     def test_usage_uses_owner_and_reports_nonnegative_remaining(self):
         self.database.return_value = [{'input_tokens': 20000, 'output_tokens': 1000}]
         request = Request()
         request.hosted_GET('/api/profile')
         self.assertEqual(request.result[1]['usage']['remaining'], 0)
+        self.assertNotIn('admin', request.result[1])
         self.assertIn('user_id=eq.' + USER, self.database.call_args.args[0])
+
+
+class RemovedAdminRouteTests(unittest.TestCase):
+    def test_admin_route_is_unavailable_for_both_methods(self):
+        from api.index import handler
+        for method in ('do_GET', 'do_POST'):
+            with self.subTest(method=method):
+                request = object.__new__(handler)
+                request.path = '/api/admin'
+                request.reply = Mock()
+                getattr(request, method)()
+                request.reply.assert_called_once_with(404, {'error': 'Not found.'})
 
 
 if __name__ == '__main__':

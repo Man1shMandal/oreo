@@ -70,3 +70,16 @@ def acquire(user_id):
 
 def release(user_id, lease):
     database("rpc/release_chat", "POST", {"p_user": user_id, "p_lease": lease})
+
+
+def activate_profile(user_id):
+    """Make sign-in sufficient while supporting the original database schema."""
+    rows = database(f"profiles?id=eq.{user_id}&select=id,email,approved,daily_token_limit,created_at")
+    if not rows:
+        raise LookupError("Account setup is incomplete. Please sign in again.")
+    profile = rows[0]
+    # The deployed quota functions still inspect the legacy flag. Nobody waits
+    # for approval: every authenticated account is enabled by the server.
+    if not profile['approved']:
+        database(f"profiles?id=eq.{user_id}", "PATCH", {"approved": True})
+    return {key: value for key, value in profile.items() if key != 'approved'}

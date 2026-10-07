@@ -14,9 +14,6 @@
       textarea, input { box-sizing: border-box; width: 100%; border: 1px solid #4a4740; background: #191816; color: inherit; padding: 14px; font: inherit; border-radius: 8px; }
       textarea { min-height: 110px; resize: vertical; }
       button:disabled { opacity: .5; cursor: default; }
-      #admin { margin-top: 32px; border-top: 1px solid #4a4740; padding-top: 16px; }
-      .account-row { padding: 12px 0; border-bottom: 1px solid #333; overflow-wrap: anywhere; }
-      .account-row input { width: 130px; padding: 8px; }
       #usage { font-size: .85rem; }
       button { margin-top: 10px; border: 1px solid #f3f0e8; border-radius: 999px; background: #f3f0e8; color: #111; padding: 10px 18px; font: inherit; cursor: pointer; }
       button.secondary { background: transparent; color: inherit; border-color: #4a4740; margin-left: 6px; }
@@ -31,7 +28,7 @@
       <h1>oreo</h1>
       <p>A small personal AI.</p>
       <section id="auth">
-        <p>Sign in with Google. New accounts need approval before they can use OREO.</p>
+        <p>Sign in with Google to chat with Oreo.</p>
         <button id="google">continue with Google</button>
       </section>
       <p id="status" role="status"></p>
@@ -44,7 +41,6 @@
         <textarea id="message" maxlength="6000" aria-label="Message" placeholder="Ask Oreo anything"></textarea>
         <button id="send">send</button><button id="sign-out" class="secondary">sign out</button>
         <div id="answer" aria-live="polite"></div>
-        <section id="admin" class="hidden"><h2>Accounts</h2><button id="refresh-admin" class="secondary">refresh accounts</button><p id="admin-status" role="status"></p><div id="users"></div></section>
       </section>
     </main>
     <script type="module">
@@ -53,12 +49,12 @@
       const auth = $('#auth'), chat = $('#chat'), status = $('#status'), answer = $('#answer');
       const historySelect = $('#history'), composer = $('#message');
       let supabase, activeConversation = null, activeUser = null, sending = false, historyVersion = 0;
-      let approved = false, remaining = 0, accountVersion = 0, loadingConversation = false;
+      let accountReady = false, remaining = 0, accountVersion = 0, loadingConversation = false;
       const updateControls = () => {
-        $('#send').disabled = sending || loadingConversation || !approved || remaining <= 0;
-        composer.disabled = sending || loadingConversation || !approved || remaining <= 0;
-        historySelect.disabled = sending || !approved;
-        $('#new-chat').disabled = sending || !approved;
+        $('#send').disabled = sending || loadingConversation || !accountReady || remaining <= 0;
+        composer.disabled = sending || loadingConversation || !accountReady || remaining <= 0;
+        historySelect.disabled = sending || !accountReady;
+        $('#new-chat').disabled = sending || !accountReady;
       };
       const api = async (path, options = {}) => {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -79,51 +75,16 @@
         for (const row of data.conversations) historySelect.add(new Option(row.title, row.id));
         historySelect.value = activeConversation || '';
       };
-      const loadAdmin = async () => {
-        const user = activeUser;
-        $('#admin-status').textContent = 'Loading accounts…';
-        try {
-          const data = await api('/api/admin');
-          if (user !== activeUser) return;
-          $('#users').replaceChildren();
-          for (const account of data.users) {
-            const row = document.createElement('div'); row.className = 'account-row';
-            const email = document.createElement('p'); email.textContent = `${account.email} · ${account.approved ? 'approved' : 'pending'}`;
-            const limit = document.createElement('input'); limit.type = 'number'; limit.min = '1'; limit.max = '1000000'; limit.step = '1'; limit.value = account.daily_token_limit;
-            limit.setAttribute('aria-label', `Daily token limit for ${account.email}`);
-            const action = document.createElement('button'); action.className = 'secondary'; action.textContent = account.approved ? 'revoke access' : 'approve';
-            const save = document.createElement('button'); save.className = 'secondary'; save.textContent = 'save limit';
-            const update = async nextApproved => {
-              if (!limit.checkValidity()) { limit.reportValidity(); return; }
-              action.disabled = save.disabled = true;
-              try {
-                await api('/api/admin', { method: 'POST', body: JSON.stringify({ user_id: account.id, approved: nextApproved, daily_token_limit: Number(limit.value) }) });
-                if (user !== activeUser) return;
-                await loadAdmin(); await loadAccount();
-              } catch (error) { if (user === activeUser) $('#admin-status').textContent = error.message; }
-              finally { action.disabled = save.disabled = false; }
-            };
-            action.onclick = () => update(!account.approved); save.onclick = () => update(account.approved);
-            row.append(email, limit, save, action); $('#users').append(row);
-          }
-          $('#admin-status').textContent = data.users.length ? 'Daily limits use estimated tokens and reset at midnight UTC.' : 'No accounts yet.';
-        } catch (error) { if (user === activeUser) $('#admin-status').textContent = error.message; }
-      };
       const loadAccount = async () => {
         const user = activeUser, version = ++accountVersion;
         try {
           const data = await api('/api/profile');
           if (user !== activeUser || version !== accountVersion) return;
-          approved = !!data.profile.approved; remaining = data.usage.remaining;
-          $('#usage').textContent = approved ? `${remaining.toLocaleString()} of ${data.profile.daily_token_limit.toLocaleString()} estimated tokens left today · resets at midnight UTC` : 'Your account is waiting for approval. Refresh after your account is approved.';
-          const showAccounts = data.admin && $('#admin').classList.contains('hidden');
-          $('#admin').classList.toggle('hidden', !data.admin);
-          if (showAccounts) void loadAdmin();
-          if (!approved) status.textContent = 'Your account is waiting for approval.';
-          else if (remaining <= 0) status.textContent = 'Your daily limit is reached. Please return after midnight UTC.';
-          else status.textContent = '';
+          accountReady = true; remaining = data.usage.remaining;
+          $('#usage').textContent = `${remaining.toLocaleString()} of ${data.profile.daily_token_limit.toLocaleString()} estimated tokens left today · resets at midnight UTC`;
+          status.textContent = remaining <= 0 ? 'Your daily limit is reached. Please return after midnight UTC.' : '';
           updateControls();
-          if (approved) await loadConversations();
+          await loadConversations();
         } catch (error) { if (user === activeUser) { status.textContent = error.message; updateControls(); } }
       };
       try {
@@ -143,8 +104,7 @@
         const user = session?.user.id || null;
         if (user !== activeUser) {
           activeUser = user; activeConversation = null; ++historyVersion; ++accountVersion;
-          approved = false; remaining = 0; loadingConversation = false; answer.textContent = ''; composer.value = ''; $('#usage').textContent = '';
-          $('#users').replaceChildren(); $('#admin-status').textContent = ''; $('#admin').classList.add('hidden');
+          accountReady = false; remaining = 0; loadingConversation = false; answer.textContent = ''; composer.value = ''; $('#usage').textContent = '';
           historySelect.replaceChildren(new Option('New chat', '')); updateControls();
           if (user) setTimeout(() => { void loadAccount(); }, 0);
           else if (!callbackError) status.textContent = '';
@@ -162,7 +122,6 @@
         if (error) status.textContent = error.message; else show(null);
       };
       $('#refresh').onclick = () => { void loadAccount(); };
-      $('#refresh-admin').onclick = () => { void loadAdmin(); };
       $('#new-chat').onclick = () => {
         if (sending) return;
         ++historyVersion; loadingConversation = false; updateControls(); activeConversation = null; historySelect.value = ''; answer.textContent = ''; composer.value = ''; status.textContent = ''; composer.focus();
@@ -180,7 +139,7 @@
         finally { if (user === activeUser && version === historyVersion) { loadingConversation = false; updateControls(); } }
       };
       $('#send').onclick = async () => {
-        const message = composer.value.trim(); if (!message || sending || loadingConversation || !approved || remaining <= 0) return;
+        const message = composer.value.trim(); if (!message || sending || loadingConversation || !accountReady || remaining <= 0) return;
         sending = true; updateControls();
         const user = activeUser; ++historyVersion; status.textContent = 'Thinking…';
         try {
@@ -192,7 +151,7 @@
           composer.value = ''; status.textContent = ''; await loadAccount();
         } catch (error) {
           if (user === activeUser) { await loadAccount(); status.textContent = error.message; }
-        } finally { sending = false; updateControls(); if (user === activeUser && approved && remaining > 0) composer.focus(); }
+        } finally { sending = false; updateControls(); if (user === activeUser && accountReady && remaining > 0) composer.focus(); }
       };
     </script>
   </body>

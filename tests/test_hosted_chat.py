@@ -27,7 +27,8 @@ class HostedChatTests(unittest.TestCase):
         self.server = HTTPServer(('127.0.0.1', 0), handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
-        self.auth = patch('api.chat.request_json', side_effect=[{'id': USER}, [{'approved': True}]]).start()
+        self.auth = patch('api.chat.request_json', return_value={'id': USER}).start()
+        self.activate = patch('api.chat.activate_profile', return_value={'id': USER}).start()
         self.acquire = patch('api.chat.acquire', return_value={'lease': CHAT}).start()
         self.release = patch('api.chat.release').start()
         self.prepare = patch('api.chat.prepare', return_value=(
@@ -82,11 +83,6 @@ class HostedChatTests(unittest.TestCase):
         self.assertEqual(self.post({'message': 'hello'})[0], 429)
         self.client.assert_not_called()
 
-    def test_revoked_approval_does_not_call_model(self):
-        self.prepare.return_value = ([], {'error': 'approval'})
-        self.assertEqual(self.post({'message': 'hello'})[0], 403)
-        self.client.assert_not_called()
-
     def test_empty_reply_is_not_saved(self):
         self.client.return_value.chat.completions.create.return_value.choices[0].message.content = ''
         self.assertEqual(self.post({'message': 'hello'})[0], 502)
@@ -105,15 +101,21 @@ class HostedChatTests(unittest.TestCase):
         self.client.assert_not_called()
         self.release.assert_not_called()
 
-    def test_pending_profile_does_not_reserve_budget(self):
-        self.auth.side_effect = [{'id': USER}, [{'approved': False}]]
-        self.assertEqual(self.post({'message': 'hello'})[0], 403)
-        self.prepare.assert_not_called()
-        self.client.assert_not_called()
+    def test_every_signed_in_account_is_automatically_enabled(self):
+        self.assertEqual(self.post({'message': 'hello'})[0], 200)
+        self.activate.assert_called_once_with(USER)
+
+    def test_legacy_pending_account_can_chat_immediately(self):
+        with patch('api.chat.activate_profile', conversations.activate_profile), patch('api.conversations.database') as database:
+            database.side_effect = [[{'id': USER, 'approved': False, 'daily_token_limit': 20000}], None]
+            self.assertEqual(self.post({'message': 'hello'})[0], 200)
+            self.assertEqual(database.call_args.args, ('profiles?id=eq.' + USER, 'PATCH', {'approved': True}))
+            self.acquire.assert_called_once_with(USER)
+            self.save.assert_called_once_with(USER, CHAT, 'hello', 'hello back')
 
     def test_missing_profile_does_not_reserve_budget(self):
-        self.auth.side_effect = [{'id': USER}, []]
-        self.assertEqual(self.post({'message': 'hello'})[0], 403)
+        self.activate.side_effect = LookupError('Account setup is incomplete.')
+        self.assertEqual(self.post({'message': 'hello'})[0], 503)
         self.prepare.assert_not_called()
 
     def test_expired_token_does_not_reserve_budget(self):
@@ -187,6 +189,23 @@ class ContextTests(unittest.TestCase):
         database.assert_called_once_with('rpc/save_chat_turn', 'POST', {
             'p_user': USER, 'p_conversation': CHAT, 'p_message': 'question', 'p_reply': 'answer',
         })
+
+
+class ProfileCompatibilityTests(unittest.TestCase):
+    @patch('api.conversations.database')
+    def test_legacy_pending_account_is_enabled_without_manual_approval(self, database):
+        database.side_effect = [[{'id': USER, 'approved': False, 'daily_token_limit': 20000}], None]
+        profile = conversations.activate_profile(USER)
+        self.assertNotIn('approved', profile)
+        self.assertEqual(database.call_args.args, ('profiles?id=eq.' + USER, 'PATCH', {'approved': True}))
+
+    @patch('api.conversations.database')
+    def test_existing_account_does_not_need_another_write(self, database):
+        database.return_value = [{'id': USER, 'approved': True, 'daily_token_limit': 20000}]
+        profile = conversations.activate_profile(USER)
+        self.assertEqual(profile['daily_token_limit'], 20000)
+        self.assertNotIn('approved', profile)
+        self.assertEqual(database.call_count, 1)
 
 
 if __name__ == '__main__':

@@ -16,7 +16,7 @@ class handler(ChatHandler, HostedHandler):
             HealthHandler.do_GET(self)
         elif path == "/api/config":
             ConfigHandler.do_GET(self)
-        elif path in ("/api/profile", "/api/conversations", "/api/admin"):
+        elif path in ("/api/profile", "/api/conversations"):
             self.hosted_GET(path)
         elif path == "/":
             body = (Path(__file__).resolve().parent.parent / "public" / "index.html").read_bytes()
@@ -31,7 +31,5 @@ class handler(ChatHandler, HostedHandler):
     def do_POST(self):
         if urlsplit(self.path).path == "/api/chat":
             super().do_POST()
-        elif urlsplit(self.path).path == "/api/admin":
-            self.admin_POST()
         else:
             self.reply(404, {"error": "Not found."})
