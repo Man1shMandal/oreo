@@ -2,8 +2,10 @@
 
 Updated 2026-10-07. Active checkout:
 `/Users/manishmandal/oreo/.claude/worktrees/web-ui`, branch `worktree-web-ui`.
-Base inspected: `39e7fbf`. Current task: remove hosted token quotas, restore the
-original circular logo, and expose personal settings. Release verification pending.
+Application commit `132c8ef` is pushed to origin/main. Token quotas are removed,
+the original circular logo is restored, and personal Settings is live at
+https://oreo.manish.engineer. Verified custom-domain deployment
+`dpl_ASBE2tUYFtP4kNxutjCP6xXyH8sG` is READY. No SQL changes required.
 
 ## Changes
 
@@ -28,6 +30,9 @@ validation, custom instructions, provider creativity with no output cap, long
 messages, attachments, research citations and streamed save failures. JavaScript
 settings harness passes open/save/reset, efficient preset and account isolation.
 Three JS syntax checks, Python compilation and git diff --check pass.
+Ten production smoke checks pass: page, all three JS modules, logo, health and
+config return 200; protected profile/history return 401 without auth; admin 404.
+The page exposes Settings and custom instructions; preferences.js is deployed.
 
 Earlier production verification covered real Haiku streaming, saved history and
 web sources. Production file submission remains untested (mock upload tests pass).
@@ -38,5 +43,7 @@ visual verification of the new settings dialog remains pending.
 
 Preserve unrelated modified AGENTS.md and untracked GEMINI.md,
 .github/copilot-instructions.md and .venv symlink. No secrets or private chat data
-are recorded. Next: push and deploy, smoke-check public assets and update this
-state with the verified release.
+are recorded. Release is complete. Next useful checks: visual Settings review
+when the browser is available, and a real production file submission/follow-up.
+This release's authenticated model/settings flow is mock-tested; earlier real
+streaming and research checks belong to the previous application release.
