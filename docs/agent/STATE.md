@@ -1,5 +1,17 @@
 # Oreo current state
 
+## Release access retry — 2026-10-07
+
+Backend and verification agents rechecked the unchanged release: staged health
+and unauthenticated access checks pass; the established public release is healthy.
+The Oreo DNS record is still absent. No source change or new deployment was needed.
+Browser inventory exposes no connected browser surfaces; native Firefox actions
+still fail with `noWindowsAvailable` and inconsistent observations. No supported
+authenticated Supabase SQL or Name.com DNS alternative is configured. Requested
+restored browser access and existing service sign-ins, not renewed deployment
+approval. Migration, DNS, OAuth domain configuration and final promotion remain
+pending. Follow the next steps in the checkpoint below when access is restored.
+
 ## Parallel release checkpoint — 2026-10-07
 
 Final prepared code commit: `d7ed931`, pushed to `release/hosted-v1` (not main).
