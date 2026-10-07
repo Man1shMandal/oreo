@@ -47,3 +47,17 @@ are recorded. Release is complete. Next useful checks: visual Settings review
 when the browser is available, and a real production file submission/follow-up.
 This release's authenticated model/settings flow is mock-tested; earlier real
 streaming and research checks belong to the previous application release.
+
+## 2026-10-07 — Internet/search diagnosis
+Inspected branch worktree-web-ui at 34bc731. Public HTTPS to example.com
+returned 200 and the custom-domain /api/health returned ok. The restricted
+agent sandbox initially failed DNS; the same checks outside it succeeded.
+The actual oreo.research search returned five BBC results, with no DuckDuckGo
+challenge, and direct example.com reading returned 171 characters on this Mac.
+Hosted UI preferences previously defaulted web to false; /api/chat only
+researches when the request web flag is true. Changed the new-account default
+to web=true, so new chats search unless the user turns Web off. Existing saved
+preferences remain in effect, and the fewer-tokens preset still turns Web off.
+Hosted authenticated search from Vercel remains unverified; next step is
+reproducing in the signed-in app and checking hosted search/planner failures if
+needed. No automated tests run. Preserve existing unrelated work.

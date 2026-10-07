@@ -1,5 +1,5 @@
 const $ = selector => document.querySelector(selector);
-const defaults = { instructions: '', reply_style: 'brief', context: 'efficient', temperature: 0.7, reuse_files: true, web: false, enter: true, model: '' };
+const defaults = { instructions: '', reply_style: 'brief', context: 'efficient', temperature: 0.7, reuse_files: true, web: true, enter: true, model: '' };
 export let preferences = { ...defaults };
 let owner = null, defaultModel = '';
 const key = () => 'oreo-settings-v1:' + owner;
