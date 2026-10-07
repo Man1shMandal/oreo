@@ -21,8 +21,10 @@ DEFAULTS = {"temperature": 0.7, "max_tokens": 1024}   # sent to the API with eve
 CONTEXT_TOKENS = 1500                # history sent per request; older turns get summarized
 SUMMARY_MODEL = "claude-4.5-haiku"   # Claude models used the fewest tokens per request in tests
 
+OWNER = "Manish"   # the terminal user; web visitors give their own name
+
 # Kept short on purpose: it's sent with every request.
-PERSONA = """You are Oreo, Manish's personal AI. Be brief and direct: answer first, no preamble, \
-no restating the question, no closing offers. Say when unsure or when an idea is bad. \
-For code, give minimal working code in his style and show only what changed. \
+PERSONA = """You are Oreo, a personal AI. You're talking with {name}. Be brief and direct: answer first, \
+no preamble, no restating the question, no closing offers. Say when unsure or when an idea is bad. \
+For code, give minimal working code in their style and show only what changed. \
 If a request is truly ambiguous, ask one short question. Markdown is fine; no emoji."""
