@@ -1,0 +1,193 @@
+"""Hosted release checks without a real model or user data."""
+
+import json
+import os
+import threading
+import unittest
+import urllib.error
+import urllib.request
+from http.server import HTTPServer
+from types import SimpleNamespace
+from unittest.mock import patch
+
+from api.chat import handler
+from api import conversations
+
+
+USER = "00000000-0000-0000-0000-000000000001"
+CHAT = "00000000-0000-0000-0000-000000000002"
+
+
+class HostedChatTests(unittest.TestCase):
+    def setUp(self):
+        self.env = patch.dict(os.environ, {
+            'SUPABASE_PUBLISHABLE_KEY': 'test', 'SUPABASE_SECRET_KEY': 'test', 'ABBY_API_KEY': 'test',
+        })
+        self.env.start()
+        self.server = HTTPServer(('127.0.0.1', 0), handler)
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+        self.auth = patch('api.chat.request_json', side_effect=[{'id': USER}, [{'approved': True}]]).start()
+        self.acquire = patch('api.chat.acquire', return_value={'lease': CHAT}).start()
+        self.release = patch('api.chat.release').start()
+        self.prepare = patch('api.chat.prepare', return_value=(
+            [{'role': 'user', 'content': 'hello'}], {'conversation_id': CHAT, 'remaining': 1000},
+        )).start()
+        self.save = patch('api.chat.save_turn').start()
+        self.client = patch('api.chat.OpenAI').start()
+        self.client.return_value.chat.completions.create.return_value = SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content='hello back'))],
+        )
+
+    def tearDown(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join()
+        patch.stopall()
+
+    def post(self, payload, token='test'):
+        request = urllib.request.Request(
+            f'http://127.0.0.1:{self.server.server_port}/api/chat',
+            data=json.dumps(payload).encode(),
+            headers={'Authorization': f'Bearer {token}' if token else ''},
+        )
+        try:
+            response = urllib.request.urlopen(request)
+        except urllib.error.HTTPError as error:
+            response = error
+        with response:
+            return response.code, json.load(response)
+
+    def test_saves_turn_and_returns_chat_id(self):
+        status, data = self.post({'message': 'hello'})
+        self.assertEqual(status, 200)
+        self.assertEqual(data['conversation_id'], CHAT)
+        self.save.assert_called_once_with(USER, CHAT, 'hello', 'hello back')
+
+    def test_no_auth_does_not_call_model(self):
+        self.assertEqual(self.post({'message': 'hello'}, token='')[0], 401)
+        self.client.assert_not_called()
+
+    def test_invalid_conversation_does_not_call_model(self):
+        self.assertEqual(self.post({'message': 'hello', 'conversation_id': []})[0], 400)
+        self.client.assert_not_called()
+
+    def test_other_users_conversation_does_not_call_model(self):
+        self.prepare.side_effect = LookupError()
+        self.assertEqual(self.post({'message': 'hello', 'conversation_id': CHAT})[0], 404)
+        self.client.assert_not_called()
+
+    def test_limit_does_not_call_model(self):
+        self.prepare.return_value = ([], {'error': 'limit'})
+        self.assertEqual(self.post({'message': 'hello'})[0], 429)
+        self.client.assert_not_called()
+
+    def test_revoked_approval_does_not_call_model(self):
+        self.prepare.return_value = ([], {'error': 'approval'})
+        self.assertEqual(self.post({'message': 'hello'})[0], 403)
+        self.client.assert_not_called()
+
+    def test_empty_reply_is_not_saved(self):
+        self.client.return_value.chat.completions.create.return_value.choices[0].message.content = ''
+        self.assertEqual(self.post({'message': 'hello'})[0], 502)
+        self.save.assert_not_called()
+
+    def test_model_failure_is_not_saved(self):
+        self.client.return_value.chat.completions.create.side_effect = RuntimeError('upstream')
+        self.assertEqual(self.post({'message': 'hello'})[0], 500)
+        self.save.assert_not_called()
+        self.release.assert_called_once_with(USER, CHAT)
+
+    def test_busy_request_does_not_reserve_or_release_another_lease(self):
+        self.acquire.return_value = {'error': 'busy'}
+        self.assertEqual(self.post({'message': 'hello'})[0], 409)
+        self.prepare.assert_not_called()
+        self.client.assert_not_called()
+        self.release.assert_not_called()
+
+    def test_pending_profile_does_not_reserve_budget(self):
+        self.auth.side_effect = [{'id': USER}, [{'approved': False}]]
+        self.assertEqual(self.post({'message': 'hello'})[0], 403)
+        self.prepare.assert_not_called()
+        self.client.assert_not_called()
+
+    def test_missing_profile_does_not_reserve_budget(self):
+        self.auth.side_effect = [{'id': USER}, []]
+        self.assertEqual(self.post({'message': 'hello'})[0], 403)
+        self.prepare.assert_not_called()
+
+    def test_expired_token_does_not_reserve_budget(self):
+        self.auth.side_effect = urllib.error.HTTPError('https://auth.invalid', 401, 'expired', {}, None)
+        self.assertEqual(self.post({'message': 'hello'})[0], 401)
+        self.prepare.assert_not_called()
+
+    def test_invalid_messages_do_not_touch_auth(self):
+        for message in ['', '   ', 'x' * 6001, None, [], 1]:
+            with self.subTest(message_type=type(message).__name__):
+                self.assertEqual(self.post({'message': message})[0], 400)
+        self.auth.assert_not_called()
+
+    def test_save_failure_is_not_reported_as_success(self):
+        self.save.side_effect = RuntimeError('database unavailable')
+        status, data = self.post({'message': 'hello'})
+        self.assertEqual(status, 500)
+        self.assertNotIn('reply', data)
+
+    def test_provider_receives_prepared_context_and_output_cap(self):
+        self.post({'message': 'hello'})
+        kwargs = self.client.return_value.chat.completions.create.call_args.kwargs
+        self.assertEqual(kwargs['messages'], self.prepare.return_value[0])
+        self.assertEqual(kwargs['max_tokens'], conversations.MAX_OUTPUT)
+
+
+class ContextTests(unittest.TestCase):
+    @patch('api.conversations.database')
+    def test_history_is_ordered_and_budgeted(self, database):
+        database.side_effect = [[{'id': CHAT}], [
+            {'role': 'assistant', 'content': 'previous answer'},
+            {'role': 'user', 'content': 'previous question'},
+        ], {'conversation_id': CHAT}]
+        messages, _ = conversations.prepare(USER, CHAT, 'next question')
+        self.assertEqual([m['role'] for m in messages], ['system', 'user', 'assistant', 'user'])
+        self.assertEqual(messages[1]['content'], 'previous question')
+        self.assertEqual(database.call_args.args[0], 'rpc/reserve_chat')
+        self.assertEqual(database.call_args.args[2]['p_output'], 700)
+
+    @patch('api.conversations.database', return_value=[])
+    def test_unowned_history_is_never_read(self, database):
+        with self.assertRaises(LookupError):
+            conversations.prepare(USER, CHAT, 'hello')
+        self.assertEqual(database.call_count, 1)
+
+    @patch('api.conversations.database')
+    def test_new_chat_budget_includes_message_and_system(self, database):
+        database.return_value = {'conversation_id': CHAT}
+        messages, _ = conversations.prepare(USER, None, 'hello')
+        self.assertEqual(len(messages), 2)
+        args = database.call_args.args
+        self.assertEqual(args[0], 'rpc/reserve_chat')
+        self.assertEqual(args[2]['p_user'], USER)
+        self.assertIsNone(args[2]['p_conversation'])
+        self.assertGreater(args[2]['p_input'], len('hello') // 4)
+
+    @patch('api.conversations.database')
+    def test_context_drops_incomplete_and_oversize_older_turns(self, database):
+        database.side_effect = [[{'id': CHAT}], [
+            {'role': 'assistant', 'content': 'latest reply'},
+            {'role': 'user', 'content': 'latest question'},
+            {'role': 'assistant', 'content': 'orphan reply'},
+            {'role': 'user', 'content': 'x' * 6001},
+        ], {'conversation_id': CHAT}]
+        messages, _ = conversations.prepare(USER, CHAT, 'next')
+        self.assertEqual([m['content'] for m in messages[1:]], ['latest question', 'latest reply', 'next'])
+
+    @patch('api.conversations.database')
+    def test_atomic_save_supplies_authenticated_owner(self, database):
+        conversations.save_turn(USER, CHAT, 'question', 'answer')
+        database.assert_called_once_with('rpc/save_chat_turn', 'POST', {
+            'p_user': USER, 'p_conversation': CHAT, 'p_message': 'question', 'p_reply': 'answer',
+        })
+
+
+if __name__ == '__main__':
+    unittest.main()

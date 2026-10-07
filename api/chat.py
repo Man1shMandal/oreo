@@ -8,6 +8,8 @@ from http.server import BaseHTTPRequestHandler
 
 from openai import OpenAI
 
+from api.conversations import MAX_OUTPUT, conversation_id, prepare, save_turn, acquire, release
+
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 
@@ -23,11 +25,15 @@ class handler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
     def do_POST(self):
+        lease = None
+        user_id = None
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if length <= 0 or length > 30000:
@@ -38,6 +44,11 @@ class handler(BaseHTTPRequestHandler):
                 self.reply(400, {"error": "Send a text message."})
                 return
             message = payload["message"].strip()
+            try:
+                chat_id = conversation_id(payload.get("conversation_id"))
+            except (ValueError, TypeError, AttributeError):
+                self.reply(400, {"error": "Send a valid conversation ID."})
+                return
             if not message or len(message) > 6000:
                 self.reply(400, {"error": "Send a message under 6,000 characters."})
                 return
@@ -67,18 +78,47 @@ class handler(BaseHTTPRequestHandler):
                 self.reply(403, {"error": "Your account is waiting for approval."})
                 return
 
-            client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url="https://api.abby.abb.com/api/v1/developers")
+            user_id = user['id']
+            lock = acquire(user_id)
+            if lock.get('error'):
+                self.reply(409 if lock['error'] == 'busy' else 403, {'error': 'A reply is already in progress. Please wait.' if lock['error'] == 'busy' else 'Your account is waiting for approval.'})
+                return
+            lease = lock['lease']
+            try:
+                messages, reservation = prepare(user['id'], chat_id, message)
+            except LookupError:
+                self.reply(404, {"error": "Conversation not found."})
+                return
+            if reservation.get("error"):
+                reason = reservation['error']
+                status, error = {
+                    "approval": (403, "Your account is waiting for approval."),
+                    "conversation": (404, "Conversation not found."),
+                    "limit": (429, "Your daily chat limit has been reached. Try again tomorrow (UTC)."),
+                }.get(reason, (503, "Oreo is unavailable right now."))
+                self.reply(status, {"error": error})
+                return
+            chat_id = reservation['conversation_id']
+            client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url="https://api.abby.abb.com/api/v1/developers", timeout=60, max_retries=1)
             completion = client.chat.completions.create(
                 model="claude-4.5-haiku",
-                messages=[
-                    {"role": "system", "content": "You are Oreo, a personal AI assistant. Be brief, direct, and useful. No emoji. Do not add creator attribution to replies."},
-                    {"role": "user", "content": message},
-                ],
-                max_tokens=700,
+                messages=messages,
+                max_tokens=MAX_OUTPUT,
                 temperature=0.7,
             )
-            self.reply(200, {"reply": completion.choices[0].message.content or "No reply returned."})
+            reply = completion.choices[0].message.content
+            if not reply or not reply.strip():
+                self.reply(502, {"error": "Oreo returned no answer. Try again shortly.", "conversation_id": chat_id})
+                return
+            save_turn(user['id'], chat_id, message, reply)
+            self.reply(200, {"reply": reply, "conversation_id": chat_id, "remaining": reservation['remaining']})
         except (ValueError, UnicodeDecodeError):
             self.reply(400, {"error": "Send a valid JSON message."})
         except Exception:
             self.reply(500, {"error": "Oreo is unavailable right now. Try again shortly."})
+        finally:
+            if lease:
+                try:
+                    release(user_id, lease)
+                except Exception:
+                    pass
