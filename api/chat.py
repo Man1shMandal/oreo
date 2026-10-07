@@ -71,7 +71,7 @@ class handler(BaseHTTPRequestHandler):
             completion = client.chat.completions.create(
                 model="claude-4.5-haiku",
                 messages=[
-                    {"role": "system", "content": "You are Oreo, Manish's personal AI. Be brief, direct, and useful. No emoji."},
+                    {"role": "system", "content": "You are Oreo, a personal AI assistant. Be brief, direct, and useful. No emoji. Do not add creator attribution to replies."},
                     {"role": "user", "content": message},
                 ],
                 max_tokens=700,
