@@ -1,19 +1,19 @@
 const $ = selector => document.querySelector(selector);
-const defaults = { instructions: '', reply_style: 'brief', context: 'efficient', temperature: 0.7, reuse_files: true, web: true, enter: true, model: '' };
+const defaults = { instructions: '', reply_style: 'brief', context: 'efficient', temperature: 0.7, reuse_files: true, web: false, enter: true, model: '' };
 export let preferences = { ...defaults };
 let owner = null, defaultModel = '';
-const key = () => 'oreo-settings-v2:' + owner;
-const previousKey = () => 'oreo-settings-v1:' + owner;
+const key = () => 'oreo-settings-v3:' + owner;
+const previousKeys = () => ['oreo-settings-v2:' + owner, 'oreo-settings-v1:' + owner];
 export function loadPreferences(user, model) {
   owner = user; defaultModel = model; preferences = { ...defaults, model };
   if (user) {
     try {
       let stored = localStorage.getItem(key());
       if (stored === null) {
-        stored = localStorage.getItem(previousKey());
+        stored = previousKeys().map(previous => localStorage.getItem(previous)).find(value => value !== null) || null;
         const migrated = JSON.parse(stored || '{}');
         for (const name of Object.keys(defaults)) if (typeof migrated[name] === typeof defaults[name]) preferences[name] = migrated[name];
-        if (stored !== null) preferences.web = true;
+        preferences.web = false;
         localStorage.setItem(key(), JSON.stringify(preferences));
       } else {
         stored = JSON.parse(stored);

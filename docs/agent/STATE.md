@@ -63,3 +63,12 @@ Vercel remains unverified; next step is reproducing in the signed-in app and
 checking hosted search/planner failures if needed. Authenticated accounts share
 the same chat, files, settings, and research feature paths; no feature gate was
 found. No automated tests run.
+
+
+## 2026-10-07 — Chat responsiveness and logo cleanup
+Web search is opt-in by default to avoid slowing ordinary chats. Existing
+preferences migrate without altering other options, and Web defaults off for
+all accounts to keep ordinary replies fast; the Web control stays available. Hosted search now uses the message directly instead of waiting for a
+second model call to plan queries. The composer clears at send and restores its
+text if the request fails. Removed the Oreo mark and favicon from the hosted
+interface. Automated tests not run.

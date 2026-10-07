@@ -186,20 +186,10 @@ class handler(BaseHTTPRequestHandler):
         query = rows[-1]["content"]
         links = research.URL.findall(query)[:3]
 
-        class SearchProvider:
-            def stream(self, model, messages, **params):
-                client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url=config.BASE_URL, timeout=30, max_retries=0)
-                result = client.chat.completions.create(model=model, messages=messages, stream=False, **params)
-                yield result.choices[0].message.content or "NONE"
-
-        class SearchChat:
-            summary = ""
-            messages = rows
-
         try:
-            queries = [] if links else research.plan(SearchProvider(), SearchChat())
+            queries = [] if links else [query[:500]] if query.strip() else []
             if not queries and not links:
                 return []
-            return research.gather(queries, links, research.keywords(query + " " + " ".join(queries)), lambda _status: None)
+            return research.gather(queries, links, research.keywords(query), lambda _status: None)
         except Exception:
             return []
