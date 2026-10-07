@@ -1,6 +1,6 @@
 # Oreo
 
-My personal AI in the terminal, running on the ABB AI API (Claude, GPT and Gemini).
+My personal AI in the terminal, running on the AI API (Claude, GPT and Gemini).
 
 ## Run
 
