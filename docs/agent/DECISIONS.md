@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-10-07 — Sign-in grants hosted chat access
+The user removed the manual approval model. Every verified signed-in account can
+chat immediately, subject to the existing daily budget. There is no admin account
+listing or approval endpoint/UI. The server automatically enables the legacy
+database flag because deployed quota/lease functions still reference it; it no
+longer controls eligibility. This keeps the existing database compatible without
+requiring another manual migration. Ownership and server-only writes remain.
+
 ## 2026-10-07 — Reserve a daily estimated chat budget on the server
 The ABB gateway omits actual usage. Hosted requests charge an estimate for
 the complete prompt and reserve the full 700-token response cap before a
