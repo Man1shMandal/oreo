@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from . import config, store
+from . import config, settings, store
 
 COMMANDS = {}
 
@@ -118,3 +118,74 @@ def _check(s, arg):
         s.out(f"  tool calling on {s.model}: [red]error[/] {e}")
         return
     s.out(f"  tool calling on {s.model}: " + ("[green]works[/]" if ok else "[yellow]not used[/]"))
+
+
+def ask_key(s):
+    """Hidden prompt for the API key; saves it to the Keychain. Returns the key or None."""
+    key = s.input("  key: ", password=True)
+    if not key:
+        return None
+    if not key.startswith("sk-"):
+        s.out("[red]  that doesn't look right — the key starts with sk-[/]")
+        return None
+    settings.set_key(key)
+    if getattr(s, "provider", None):
+        s.provider.set_key(key)
+    s.out("[green]  saved to Keychain[/]")
+    return key
+
+
+def _test(s):
+    try:
+        s.provider.client.chat.completions.create(
+            model=s.model, max_tokens=5, messages=[{"role": "user", "content": "hi"}])
+        d = s.provider.usage()
+        s.out(f"  [green]connected[/] · {s.model} answered · {d['percentage']} of monthly tokens used")
+    except Exception as e:
+        s.out(f"  [red]failed:[/] {e}")
+
+
+@command("settings", "key, default model, temperature, instructions")
+def _settings(s, arg):
+    while True:
+        st = s.settings
+        short = next((k for k, v in config.MODELS.items() if v == st["model"]), st["model"])
+        instr = st["instructions"].replace("\n", " ")
+        rows = [
+            ("API key", "saved in Keychain"),
+            ("Default model", short),
+            ("Temperature", st["temperature"]),
+            ("Reply length", f"{st['max_tokens']} tokens"),
+            ("Instructions", (instr[:40] + "…") if len(instr) > 40 else instr or "(none)"),
+            ("Test connection", ""),
+        ]
+        s.out("\n  [bold]Settings[/]")
+        for i, (name, val) in enumerate(rows, 1):
+            s.out(f"  {i}  {name:<16} [dim]{val}[/]")
+        choice = s.input("\n  pick 1-6, Enter to go back: ")
+        if not choice:
+            return
+        if choice == "1":
+            ask_key(s)
+        elif choice == "2":
+            s.out("  " + "  ".join(config.MODELS))
+            m = config.MODELS.get(s.input("  model: "))
+            if m:
+                st["model"] = s.model = m
+        elif choice == "3":
+            try:
+                st["temperature"] = s.params["temperature"] = min(2.0, max(0.0, float(s.input("  0–2: "))))
+            except ValueError:
+                s.out("  [red]enter a number like 0.7[/]")
+        elif choice == "4":
+            try:
+                st["max_tokens"] = s.params["max_tokens"] = max(64, int(s.input("  tokens: ")))
+            except ValueError:
+                s.out("  [red]enter a whole number like 4096[/]")
+        elif choice == "5":
+            s.out("  [dim]Applies to every chat, e.g. 'I code in Python and C++; keep answers short.'[/]")
+            st["instructions"] = s.input("  instructions: ", default=st["instructions"])
+        elif choice == "6":
+            _test(s)
+            continue
+        settings.save(st)
