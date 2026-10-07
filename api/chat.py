@@ -2,12 +2,16 @@
 
 import json
 import os
+import tempfile
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler
+from pathlib import Path
 
 from openai import OpenAI
 
+from oreo import attach, config, research
+from api.messages import pack, file_metadata
 from api.conversations import MAX_OUTPUT, conversation_id, prepare, save_turn, acquire, release, activate_profile
 
 
@@ -21,7 +25,15 @@ def request_json(url, headers, method="GET", data=None):
 
 
 class handler(BaseHTTPRequestHandler):
+    def event(self, payload):
+        if self.streaming:
+            self.wfile.write(("data: " + json.dumps(payload) + "\n\n").encode())
+            self.wfile.flush()
+
     def reply(self, status, payload):
+        if getattr(self, "streaming", False):
+            self.event({**payload, "done": status == 200})
+            return
         body = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
@@ -32,25 +44,36 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self):
+        self.streaming = False
         lease = None
         user_id = None
         try:
             length = int(self.headers.get("Content-Length", "0"))
-            if length <= 0 or length > 30000:
-                self.reply(400, {"error": "Send a valid message under 6,000 characters."})
+            if length <= 0 or length > 3_200_000:
+                self.reply(400, {"error": "Message or attachments are too large. Keep the total upload under 3 MB."})
                 return
             payload = json.loads(self.rfile.read(length))
-            if not isinstance(payload, dict) or not isinstance(payload.get("message"), str):
+            if not isinstance(payload, dict) or not isinstance(payload.get("message", ""), str):
                 self.reply(400, {"error": "Send a text message."})
                 return
-            message = payload["message"].strip()
+            message = payload.get("message", "").strip()
             try:
                 chat_id = conversation_id(payload.get("conversation_id"))
             except (ValueError, TypeError, AttributeError):
                 self.reply(400, {"error": "Send a valid conversation ID."})
                 return
-            if not message or len(message) > 6000:
+            if len(message) > 6000:
                 self.reply(400, {"error": "Send a message under 6,000 characters."})
+                return
+            uploads = payload.get("files", [])
+            if not isinstance(uploads, list) or len(uploads) > 5:
+                self.reply(400, {"error": "Attach up to 5 files at a time."})
+                return
+            if any(not isinstance(u, dict) or not isinstance(u.get("data"), str) or not isinstance(u.get("name", ""), str) for u in uploads):
+                self.reply(400, {"error": "Send valid file attachments."})
+                return
+            if not message and not uploads:
+                self.reply(400, {"error": "Write a message or attach a file."})
                 return
 
             token = self.headers.get("Authorization", "").removeprefix("Bearer ").strip()
@@ -80,10 +103,23 @@ class handler(BaseHTTPRequestHandler):
                 self.reply(409 if lock['error'] == 'busy' else 503, {'error': 'A reply is already in progress. Please wait.' if lock['error'] == 'busy' else 'Oreo is unavailable right now. Try again shortly.'})
                 return
             lease = lock['lease']
+            sources = []
             try:
-                messages, reservation = prepare(user['id'], chat_id, message)
+                with tempfile.TemporaryDirectory(prefix="oreo-uploads-") as temp_dir:
+                    blocks, image_names, errors = attach.process(uploads, Path(temp_dir))
+                    if errors:
+                        raise ValueError(" · ".join(errors))
+                    if sum(len(block) for block in blocks) > 48000:
+                        raise ValueError("This document is too long for one message. Attach a shorter excerpt (up to 48,000 characters).")
+                    images = [attach.image_part(Path(temp_dir), name) for name in image_names]
+                    stored_message = pack(message, documents=blocks, images=images,
+                                          files=file_metadata(uploads))
+                    messages, reservation = prepare(user_id, chat_id, stored_message, extra_tokens=4000 if payload.get("web") else 0)
             except LookupError:
                 self.reply(404, {"error": "Conversation not found."})
+                return
+            except ValueError as error:
+                self.reply(400, {"error": str(error)})
                 return
             if reservation.get("error"):
                 reason = reservation['error']
@@ -94,19 +130,52 @@ class handler(BaseHTTPRequestHandler):
                 self.reply(status, {"error": error})
                 return
             chat_id = reservation['conversation_id']
-            client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url="https://api.abby.abb.com/api/v1/developers", timeout=60, max_retries=1)
-            completion = client.chat.completions.create(
-                model="claude-4.5-haiku",
-                messages=messages,
-                max_tokens=MAX_OUTPUT,
-                temperature=0.7,
-            )
-            reply = completion.choices[0].message.content
+            wants_stream = payload.get("stream") is True
+            if wants_stream:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Accel-Buffering", "no")
+                self.end_headers()
+                self.streaming = True
+                self.event({"conversation_id": chat_id, "status": "Searching the web…" if payload.get("web") else "Thinking…"})
+            warnings = []
+            if payload.get("web"):
+                sources = self.search_web(messages)
+                if sources:
+                    # Research context is bounded by the budget reserved before any model call.
+                    context = research.block(sources)[:13000]
+                    content = messages[-1]["content"]
+                    if isinstance(content, str):
+                        messages[-1]["content"] += context
+                    else:
+                        content[0]["text"] += context
+                else:
+                    warnings.append("Web search returned no readable sources. This reply does not use fresh web results.")
+                self.event({"status": "Writing…", "sources": [{"title": s["title"], "url": s["url"]} for s in sources]})
+            model = payload.get("model") if payload.get("model") in config.MODELS.values() else config.MODELS[config.DEFAULT_MODEL]
+            if any(isinstance(m["content"], list) for m in messages) and not model.startswith("claude"):
+                model = config.VISION_MODEL
+            client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url="https://api.abby.abb.com/api/v1/developers", timeout=120, max_retries=0)
+            if wants_stream:
+                chunks = client.chat.completions.create(model=model, messages=messages,
+                    max_tokens=MAX_OUTPUT, temperature=0.7, stream=True)
+                pieces = []
+                for chunk in chunks:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        piece = chunk.choices[0].delta.content
+                        pieces.append(piece)
+                        self.event({"text": piece})
+                reply = "".join(pieces)
+            else:
+                completion = client.chat.completions.create(model=model, messages=messages,
+                    max_tokens=MAX_OUTPUT, temperature=0.7)
+                reply = completion.choices[0].message.content
             if not reply or not reply.strip():
                 self.reply(502, {"error": "Oreo returned no answer. Try again shortly.", "conversation_id": chat_id})
                 return
-            save_turn(user['id'], chat_id, message, reply)
-            self.reply(200, {"reply": reply, "conversation_id": chat_id, "remaining": reservation['remaining']})
+            save_turn(user['id'], chat_id, stored_message, pack(reply, sources=[{"title": s["title"], "url": s["url"]} for s in sources]))
+            self.reply(200, {"reply": reply, "conversation_id": chat_id, "remaining": reservation['remaining'], "warnings": warnings, "model": model, "attachment_errors": errors, "sources": [{"title": s["title"], "url": s["url"]} for s in sources]})
         except (ValueError, UnicodeDecodeError):
             self.reply(400, {"error": "Send a valid JSON message."})
         except Exception:
@@ -117,3 +186,31 @@ class handler(BaseHTTPRequestHandler):
                     release(user_id, lease)
                 except Exception:
                     pass
+
+    def search_web(self, messages):
+        # These messages have already passed ownership and budget checks.
+        rows = []
+        for m in messages:
+            if m["role"] != "system":
+                content = m["content"]
+                rows.append({"role": m["role"], "content": content if isinstance(content, str) else content[0]["text"]})
+        query = rows[-1]["content"]
+        links = research.URL.findall(query)[:3]
+
+        class SearchProvider:
+            def stream(self, model, messages, **params):
+                client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url=config.BASE_URL, timeout=30, max_retries=0)
+                result = client.chat.completions.create(model=model, messages=messages, stream=False, **params)
+                yield result.choices[0].message.content or "NONE"
+
+        class SearchChat:
+            summary = ""
+            messages = rows
+
+        try:
+            queries = [] if links else research.plan(SearchProvider(), SearchChat())
+            if not queries and not links:
+                return []
+            return research.gather(queries, links, research.keywords(query + " " + " ".join(queries)), lambda _status: None)
+        except Exception:
+            return []

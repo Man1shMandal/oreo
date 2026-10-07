@@ -50,9 +50,18 @@ def public(url):
         return False
 
 
+class PublicRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not public(newurl) or urllib.parse.urlsplit(newurl).scheme not in ("http", "https"):
+            raise ValueError("Refusing a redirect to a private address")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def get(url, limit=2_000_000):
+    if urllib.parse.urlsplit(url).scheme not in ("http", "https") or not public(url):
+        raise ValueError("Only public web pages can be read")
     req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=12) as r:
+    with urllib.request.build_opener(PublicRedirect()).open(req, timeout=12) as r:
         return r.read(limit).decode(r.headers.get_content_charset() or "utf-8", "replace")
 
 

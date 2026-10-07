@@ -38,3 +38,25 @@ Keep the app lean and modular, keep UI controls minimal, and preserve token-savi
 behavior. Local terminal/web data and secrets stay local; hosted authentication and
 data use Supabase and server-side environment variables. These constraints were
 already documented in AGENTS.md; inspect implementation before assuming completion.
+
+## 2026-10-07 — Restore local chat capabilities in the hosted app
+Use the local UI's safe markdown renderer and shared attachment/research modules.
+The hosted UI stays buildless, with separate JavaScript modules for chat state
+and markdown. Stream answers, keep the composer anchored, and use a mobile chat
+drawer. Preserve Google sign-in and server-owned budgets and history.
+
+## 2026-10-07 — Persist bounded attachments in versioned message content
+The existing owned message rows hold a versioned envelope for document text,
+gateway-compatible image PDF parts, small previews, file names, and citations.
+Plain-text rows remain compatible. This avoids requiring a manual migration for
+this release and enables reopened file follow-ups. Combined uploads are limited
+to 2.2 MB, extracted text to 48,000 characters, and recent context remains bounded.
+This is appropriate for the current small-file interface; move larger files to
+private object storage if the limits expand.
+
+## 2026-10-07 — Reserve research costs before using any model
+Prepare checks conversation ownership and reserves quota before research sees
+history or calls the planner. Reserve 4,000 extra estimated tokens for bounded
+research and a 2,048-token answer cap. Disable automatic SDK retries to avoid
+unreserved repeated provider requests. Search failures must be visible to users.
+Validate public URLs again on redirects as well as on the first fetch.

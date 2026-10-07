@@ -153,7 +153,7 @@ class ContextTests(unittest.TestCase):
         self.assertEqual([m['role'] for m in messages], ['system', 'user', 'assistant', 'user'])
         self.assertEqual(messages[1]['content'], 'previous question')
         self.assertEqual(database.call_args.args[0], 'rpc/reserve_chat')
-        self.assertEqual(database.call_args.args[2]['p_output'], 700)
+        self.assertEqual(database.call_args.args[2]['p_output'], conversations.MAX_OUTPUT)
 
     @patch('api.conversations.database', return_value=[])
     def test_unowned_history_is_never_read(self, database):

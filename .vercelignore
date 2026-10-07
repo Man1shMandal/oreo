@@ -1,0 +1,11 @@
+.venv
+.git
+.claude
+.env*
+__pycache__
+tests
+docs
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.github
