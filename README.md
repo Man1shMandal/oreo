@@ -12,9 +12,15 @@ To get an `oreo` command everywhere:
 
 Or in the browser:
 
-    oreo web              # prints a link for this Mac and one for your network
+    oreo web              # http://localhost here, http://oreo.local for the rest of the network
     oreo web --local      # this Mac only
     oreo web 8080         # another port; --no-open skips opening the browser
+
+It uses port 80 so the link has no port number, and falls back to 4747 if 80 is taken. The name `oreo.local` is announced with Bonjour while the server runs. Macs, iPhones and recent Windows and Android devices pick it up; on anything else, use the IP address it prints.
+
+Use the + button to attach PDFs, Word files, text and code files, or images. You can also drag them in or paste them. Documents are turned into text. Images and scanned PDFs are sent as PDF pages, the only way the ABB gateway takes pictures. Only Claude can see them, so a message with a picture always goes to Sonnet.
+
+The Web button (on by default) lets Oreo research. Haiku first decides whether the question needs the web. If it does, Oreo searches DuckDuckGo (no key needed), reads the top 5 pages, keeps the relevant paragraphs and answers with numbered sources. A searched answer costs about 3k tokens; anything else costs one tiny Haiku call. Paste a link and Oreo reads that page directly.
 
 Anyone on the same Wi-Fi can open the network link. Oreo asks each person their name and keeps their chats separate, in `~/.oreo/people/<name>`. Everyone uses your API key and monthly tokens.
 
@@ -30,7 +36,7 @@ Type `/settings` to change the key, default model, temperature, reply length and
 - `@path/to/file` attaches a file.
 - `/help` lists commands: `/settings`, `/model`, `/new`, `/resume`, `/usage`, `/system`, `/temp`, `/check`.
 
-Chats are saved in `~/.oreo/chats`.
+Chats are saved as JSON in `~/.oreo/chats`. Web visitors' chats go in `~/.oreo/people/<name>`. Uploaded images go in an `uploads` folder next to the chats.
 
 ## Saving tokens
 
@@ -54,5 +60,7 @@ The cheapest models per request are the Claude ones. In a quick test the same on
 - `oreo/files.py`: `@file` attachments
 - `oreo/store.py`: saved chats
 - `oreo/lean.py`: token saving (history window, summaries, cache)
+- `oreo/attach.py`: uploaded files (PDF, Word, text, images)
+- `oreo/research.py`: web search and reading for answers
 - `oreo/web.py` + `oreo/web.html`: the browser UI (local only, no extra installs)
 - `oreo/settings.py`: saved settings and the Keychain key

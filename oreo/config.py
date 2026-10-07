@@ -20,6 +20,7 @@ DEFAULTS = {"temperature": 0.7, "max_tokens": 1024}   # sent to the API with eve
 # Token saving (see lean.py)
 CONTEXT_TOKENS = 1500                # history sent per request; older turns get summarized
 SUMMARY_MODEL = "claude-4.5-haiku"   # Claude models used the fewest tokens per request in tests
+VISION_MODEL = "claude-4.6-sonnet"   # used for messages with images; only Claude sees them via the ABB gateway
 
 OWNER = "Manish"   # the terminal user; web visitors give their own name
 
