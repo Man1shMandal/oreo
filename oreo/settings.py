@@ -10,7 +10,8 @@ PATH = Path.home() / ".oreo" / "settings.json"
 
 
 def load():
-    s = {"model": config.MODELS[config.DEFAULT_MODEL], "instructions": "", **config.DEFAULTS}
+    s = {"model": config.MODELS[config.DEFAULT_MODEL], "instructions": "",
+         "context": config.CONTEXT_TOKENS, **config.DEFAULTS}
     if PATH.exists():
         s.update(json.loads(PATH.read_text()))
     return s

@@ -26,6 +26,19 @@ Type `/settings` to change the key, default model, temperature, reply length and
 
 Chats are saved in `~/.oreo/chats`.
 
+## Saving tokens
+
+Oreo is set up to spend as little of the 20M monthly tokens as it can:
+
+- The system prompt is short (about 80 tokens) and asks for brief answers.
+- Only about 1500 tokens of recent history go with each message. Older turns are folded into an 80-word summary by Haiku. Change this under Settings > Memory.
+- Attached files are sent once. Later messages carry a one-line note instead, so `@` the file again if Oreo needs to see it.
+- Replies are capped at 1024 tokens (Settings > Reply length).
+- Asking the exact same thing in the same context again is answered from `~/.oreo/cache` for free.
+- Each reply shows a rough token count, e.g. `≈94 in · 2 out`.
+
+The cheapest models per request are the Claude ones. In a quick test the same one-line question cost 25 tokens on Haiku or Sonnet, 36 on GPT and 82 on Gemini, which spends extra on hidden reasoning.
+
 ## Code
 
 - `oreo/config.py`: models, defaults, Oreo's personality
@@ -34,5 +47,6 @@ Chats are saved in `~/.oreo/chats`.
 - `oreo/cli.py`: chat loop
 - `oreo/files.py`: `@file` attachments
 - `oreo/store.py`: saved chats
+- `oreo/lean.py`: token saving (history window, summaries, cache)
 - `oreo/web.py` + `oreo/web.html`: the browser UI (local only, no extra installs)
 - `oreo/settings.py`: saved settings and the Keychain key

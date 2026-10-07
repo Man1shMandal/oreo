@@ -7,7 +7,7 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import config, files, settings, store
+from . import config, files, lean, settings, store
 from .provider import Provider
 
 PAGE = Path(__file__).with_name("web.html")
@@ -21,13 +21,6 @@ class App:
         self.settings = settings.load()
         key = os.environ.get("ABBY_API_KEY") or settings.get_key()
         self.provider = Provider(key) if key else None
-
-    def system_prompt(self):
-        s = config.PERSONA.replace("running in his terminal", "running in his browser")
-        s += f"\nCurrent directory: {os.getcwd()}"
-        if self.settings["instructions"]:
-            s += f"\n\nStanding instructions from the user:\n{self.settings['instructions']}"
-        return s
 
 
 def chat_path(cid):
@@ -99,7 +92,7 @@ class Handler(BaseHTTPRequestHandler):
         st = self.app.settings
         self.send(200, {
             "models": config.MODELS,
-            "settings": {k: st[k] for k in ("model", "temperature", "max_tokens", "instructions")},
+            "settings": {k: st[k] for k in ("model", "temperature", "max_tokens", "context", "instructions")},
             "has_key": self.app.provider is not None,
         })
 
@@ -122,6 +115,8 @@ class Handler(BaseHTTPRequestHandler):
             st["temperature"] = min(2.0, max(0.0, float(b["temperature"])))
         if "max_tokens" in b:
             st["max_tokens"] = max(64, int(b["max_tokens"]))
+        if "context" in b:
+            st["context"] = max(200, int(b["context"]))
         if "instructions" in b:
             st["instructions"] = str(b["instructions"]).strip()
         settings.save(st)
@@ -152,7 +147,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {"error": "no API key yet"})
         try:
             app.provider.client.chat.completions.create(
-                model=app.settings["model"], max_tokens=5,
+                model=app.settings["model"], max_tokens=1,
                 messages=[{"role": "user", "content": "hi"}])
             d = app.provider.usage()
             self.send(200, {"ok": True, "message": f"connected · {d['percentage']} of monthly tokens used"})
@@ -167,7 +162,7 @@ class Handler(BaseHTTPRequestHandler):
         chat = store.Chat.load(chat_path(b["id"])) if b.get("id") else store.Chat()
         model = b.get("model") or app.settings["model"]
         text, attached, errors = files.expand(str(b.get("text", "")))
-        chat.messages.append({"role": "user", "content": text})
+        chat.messages.append({"role": "user", "content": lean.squeeze(text)})
         chat.save()
 
         self.send_response(200)
@@ -183,13 +178,13 @@ class Handler(BaseHTTPRequestHandler):
         try:
             event({"chat": chat.path.stem, "title": chat.title, "attached": attached, "errors": errors})
             params = {k: app.settings[k] for k in config.DEFAULTS}
-            msgs = [{"role": "system", "content": app.system_prompt()}] + chat.messages
-            for piece in app.provider.stream(model, msgs, **params):
+            msgs = lean.build(chat, lean.system_prompt(app.settings), app.settings["context"])
+            for piece in lean.stream(app.provider, model, msgs, params):
                 reply += piece
                 event({"text": piece})
             chat.messages.append({"role": "assistant", "content": reply})
             chat.save()
-            event({"done": app.provider.last_model})
+            event({"done": lean.footer(app.provider, msgs, reply)})
         except (BrokenPipeError, ConnectionResetError):
             # user hit Stop: keep what arrived
             if reply:
@@ -203,6 +198,14 @@ class Handler(BaseHTTPRequestHandler):
                 event({"error": str(e)})
             except OSError:
                 pass
+            return
+        # fold old turns into a summary once they no longer fit the memory budget
+        if reply and lean.needs_compact(chat, app.settings["context"]):
+            try:
+                lean.compact(app.provider, chat)
+                chat.save()
+            except Exception:
+                pass  # next message just sends a shorter window
 
 
     @staticmethod

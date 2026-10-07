@@ -9,7 +9,7 @@ from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
 
-from . import commands, config, files, settings, store
+from . import commands, config, files, lean, settings, store
 from .provider import Provider
 
 
@@ -38,28 +38,21 @@ class Session:
     def input(self, label, password=False, default=""):
         return prompt(label, is_password=password, default=default).strip()
 
-    def system_prompt(self):
-        s = config.PERSONA + f"\nCurrent directory: {os.getcwd()}"
-        for title, extra in (("Standing instructions", self.settings["instructions"]),
-                             ("Instructions for this session", self.extra_system)):
-            if extra:
-                s += f"\n\n{title} from the user:\n{extra}"
-        return s
-
     def ask(self, text):
         text, attached, errors = files.expand(text)
         for e in errors:
             self.out(f"[yellow]{e}[/]")
         if attached:
             self.out(f"[dim]attached {', '.join(attached)}[/]")
-        self.chat.messages.append({"role": "user", "content": text})
-        msgs = [{"role": "system", "content": self.system_prompt()}] + self.chat.messages
+        self.chat.messages.append({"role": "user", "content": lean.squeeze(text)})
+        system = lean.system_prompt(self.settings, self.extra_system)
+        msgs = lean.build(self.chat, system, self.settings["context"])
 
         reply = ""
         self.out("")
         try:
             with Live(Markdown(""), console=self.console, refresh_per_second=12, vertical_overflow="visible") as live:
-                for piece in self.provider.stream(self.model, msgs, **self.params):
+                for piece in lean.stream(self.provider, self.model, msgs, self.params):
                     reply += piece
                     live.update(Markdown(reply))
         except KeyboardInterrupt:
@@ -69,8 +62,13 @@ class Session:
             self.chat.messages.pop()
             return
         self.chat.messages.append({"role": "assistant", "content": reply})
+        self.out(f"[dim]{lean.footer(self.provider, msgs, reply)}[/]\n")
+        if lean.needs_compact(self.chat, self.settings["context"]):
+            try:
+                lean.compact(self.provider, self.chat)
+            except Exception as e:
+                self.out(f"[dim]couldn't summarize older messages: {e}[/]")
         self.chat.save()
-        self.out(f"[dim]{self.provider.last_model}[/]\n")
 
     def handle(self, line):
         if line.startswith("/"):
