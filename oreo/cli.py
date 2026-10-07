@@ -3,31 +3,48 @@
 import os
 from pathlib import Path
 
-from prompt_toolkit import PromptSession
+from prompt_toolkit import PromptSession, prompt
 from prompt_toolkit.history import FileHistory
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
 
-from . import commands, config, files, store
+from . import commands, config, files, settings, store
 from .provider import Provider
 
 
 class Session:
     def __init__(self, provider=None):
         self.console = Console(highlight=False)
-        self.provider = provider or Provider()
-        self.model = config.MODELS[config.DEFAULT_MODEL]
-        self.params = dict(config.DEFAULTS)
+        self.settings = settings.load()
+        self.model = self.settings["model"]
+        self.params = {k: self.settings[k] for k in config.DEFAULTS}
         self.extra_system = ""
         self.chat = store.Chat()
+        self.provider = provider or self.connect()
+
+    def connect(self):
+        key = os.environ.get("ABBY_API_KEY") or settings.get_key()
+        if not key:
+            self.out("[bold]Welcome to Oreo.[/] Paste your ABB API key to get started (starts with sk-).")
+            key = commands.ask_key(self)
+            if not key:
+                raise SystemExit("No key, no Oreo. Run oreo again when you have it.")
+        return Provider(key)
 
     def out(self, text):
         self.console.print(text)
 
+    def input(self, label, password=False, default=""):
+        return prompt(label, is_password=password, default=default).strip()
+
     def system_prompt(self):
         s = config.PERSONA + f"\nCurrent directory: {os.getcwd()}"
-        return s + (f"\n\nExtra instructions from the user:\n{self.extra_system}" if self.extra_system else "")
+        for title, extra in (("Standing instructions", self.settings["instructions"]),
+                             ("Instructions for this session", self.extra_system)):
+            if extra:
+                s += f"\n\n{title} from the user:\n{extra}"
+        return s
 
     def ask(self, text):
         text, attached, errors = files.expand(text)

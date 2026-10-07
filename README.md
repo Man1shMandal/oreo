@@ -10,13 +10,15 @@ To get an `oreo` command everywhere:
 
     ln -s ~/oreo/bin/oreo /opt/homebrew/bin/oreo
 
-The key comes from the macOS Keychain (the same entry `Check Usage.command` uses), or from `ABBY_API_KEY` if set.
+On first run Oreo asks for your API key and saves it to the macOS Keychain (the same entry `Check Usage.command` uses). `ABBY_API_KEY` overrides it if set.
+
+Type `/settings` to change the key, default model, temperature, reply length and standing instructions, or to test the connection. Settings are saved in `~/.oreo/settings.json`.
 
 ## Use
 
 - Type to chat. Ctrl-C stops a reply, Ctrl-D quits.
 - `@path/to/file` attaches a file.
-- `/help` lists commands: `/model`, `/new`, `/resume`, `/usage`, `/system`, `/temp`, `/check`.
+- `/help` lists commands: `/settings`, `/model`, `/new`, `/resume`, `/usage`, `/system`, `/temp`, `/check`.
 
 Chats are saved in `~/.oreo/chats`.
 
@@ -28,3 +30,4 @@ Chats are saved in `~/.oreo/chats`.
 - `oreo/cli.py`: chat loop
 - `oreo/files.py`: `@file` attachments
 - `oreo/store.py`: saved chats
+- `oreo/settings.py`: saved settings and the Keychain key

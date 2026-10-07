@@ -1,8 +1,6 @@
 """Talks to the ABB API. Swap this file to support another provider."""
 
 import json
-import os
-import subprocess
 import urllib.request
 
 from openai import OpenAI
@@ -10,24 +8,13 @@ from openai import OpenAI
 from . import config
 
 
-def api_key():
-    key = os.environ.get("ABBY_API_KEY")
-    if key:
-        return key
-    try:
-        return subprocess.run(
-            ["security", "find-generic-password", "-s", config.KEYCHAIN_SERVICE,
-             "-a", config.KEYCHAIN_ACCOUNT, "-w"],
-            capture_output=True, text=True, check=True,
-        ).stdout.strip()
-    except subprocess.CalledProcessError:
-        raise SystemExit("No API key. Run ~/Desktop/ABBY_API/'Replace Key.command' or set ABBY_API_KEY.")
-
-
 class Provider:
-    def __init__(self):
-        self.key = api_key()
-        self.client = OpenAI(api_key=self.key, base_url=config.BASE_URL)
+    def __init__(self, key):
+        self.set_key(key)
+
+    def set_key(self, key):
+        self.key = key
+        self.client = OpenAI(api_key=key, base_url=config.BASE_URL)
 
     def stream(self, model, messages, **params):
         """Yield text chunks; the final served model name is stored on self.last_model."""
