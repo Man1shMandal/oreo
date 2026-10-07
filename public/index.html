@@ -53,8 +53,16 @@
       const session = (await supabase.auth.getSession()).data.session; show(session);
       supabase.auth.onAuthStateChange((_event, next) => show(next));
       const credentials = () => ({ email: document.querySelector('#email').value.trim(), password: document.querySelector('#password').value });
-      document.querySelector('#sign-in').onclick = async () => { const { error } = await supabase.auth.signInWithPassword(credentials()); status.textContent = error?.message || ''; };
-      document.querySelector('#sign-up').onclick = async () => { const { error } = await supabase.auth.signUp(credentials()); status.textContent = error?.message || 'Check your email to confirm your account.'; };
+      const validCredentials = () => {
+        const value = credentials();
+        if (!value.email || value.password.length < 6) {
+          status.textContent = 'Enter an email and a password with at least 6 characters.';
+          return null;
+        }
+        return value;
+      };
+      document.querySelector('#sign-in').onclick = async () => { const value = validCredentials(); if (!value) return; const { error } = await supabase.auth.signInWithPassword(value); status.textContent = error?.message || ''; };
+      document.querySelector('#sign-up').onclick = async () => { const value = validCredentials(); if (!value) return; const { error } = await supabase.auth.signUp(value); status.textContent = error?.message || 'Check your email to confirm your account.'; };
       document.querySelector('#sign-out').onclick = () => supabase.auth.signOut();
       document.querySelector('#send').onclick = async () => {
         const message = document.querySelector('#message').value.trim(); if (!message) return;
