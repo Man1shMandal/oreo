@@ -1,6 +1,7 @@
 """Talks to the ABB API. Swap this file to support another provider."""
 
 import json
+import time
 import urllib.request
 
 from openai import OpenAI
@@ -16,17 +17,25 @@ class Provider:
         self.key = key
         self.client = OpenAI(api_key=key, base_url=config.BASE_URL)
 
-    def stream(self, model, messages, **params):
-        """Yield text chunks; the final served model name is stored on self.last_model."""
+    def stream(self, model, messages, tries=3, **params):
+        """Yield text chunks; the final served model name is stored on self.last_model.
+        The gateway sometimes swallows an upstream error and streams nothing, so empty replies are retried."""
         self.last_model = model
-        resp = self.client.chat.completions.create(
-            model=model, messages=messages, stream=True, **params
-        )
-        for chunk in resp:
-            if chunk.model:
-                self.last_model = chunk.model
-            if chunk.choices and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+        for attempt in range(tries):
+            resp = self.client.chat.completions.create(
+                model=model, messages=messages, stream=True, **params
+            )
+            got = False
+            for chunk in resp:
+                if chunk.model:
+                    self.last_model = chunk.model
+                if chunk.choices and chunk.choices[0].delta.content:
+                    got = True
+                    yield chunk.choices[0].delta.content
+            if got:
+                return
+            time.sleep(1 + attempt)
+        raise RuntimeError("the ABB server sent back nothing (it's having trouble), try again in a minute")
 
     def usage(self):
         req = urllib.request.Request(

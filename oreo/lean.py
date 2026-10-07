@@ -51,7 +51,10 @@ def build(chat, system, budget):
         imgs = m.get("images")
         if imgs and i == 0:
             folder = chat.path.parent / "uploads"
-            content = [{"type": "text", "text": content}] + [attach.image_part(folder, n) for n in imgs]
+            text = content or "(sent an attachment with no message)"   # the gateway rejects empty text
+            if any(not n.endswith(".pdf") for n in imgs):
+                text += "\n[Photos come wrapped as PDF pages; call them photos/images.]"
+            content = [{"type": "text", "text": text}] + [attach.image_part(folder, n) for n in imgs]
         elif imgs:
             content += f"\n[{len(imgs)} image(s) were attached earlier]"
         out.append({"role": m["role"], "content": content})
@@ -107,7 +110,8 @@ def stream(provider, model, msgs, params, info):
     for piece in provider.stream(model, msgs, **params):
         reply += piece
         yield piece
-    remember(model, msgs, params, reply)
+    if reply.strip():
+        remember(model, msgs, params, reply)
 
 
 def footer(info, msgs, reply):
