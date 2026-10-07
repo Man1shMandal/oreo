@@ -10,9 +10,15 @@ To get an `oreo` command everywhere:
 
     ln -s ~/oreo/bin/oreo /opt/homebrew/bin/oreo
 
-Or in the browser, with the same chats and settings:
+Or in the browser:
 
-    oreo web              # opens http://127.0.0.1:4747; `oreo web 8080` for another port, --no-open to skip the browser
+    oreo web              # prints a link for this Mac and one for your network
+    oreo web --local      # this Mac only
+    oreo web 8080         # another port; --no-open skips opening the browser
+
+Anyone on the same Wi-Fi can open the network link. Oreo asks each person their name and keeps their chats separate, in `~/.oreo/people/<name>`. Everyone uses your API key and monthly tokens.
+
+Some things only work from a browser on this Mac (http://127.0.0.1:4747): settings, the API key, usage, `@file` attachments, your standing instructions, and the chats you share with the terminal. Names aren't passwords, so anyone on the network can type someone else's name and see that person's chats. Only use it on networks you trust.
 
 On first run Oreo asks for your API key and saves it to the macOS Keychain (the same entry `Check Usage.command` uses). `ABBY_API_KEY` overrides it if set.
 

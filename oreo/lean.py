@@ -16,9 +16,10 @@ def tokens(text):
     return len(text) // 4 + 1
 
 
-def system_prompt(settings, extra=""):
-    s = config.PERSONA
-    for title, text in (("Standing instructions", settings["instructions"]),
+def system_prompt(settings, extra="", name=None, owner=True):
+    """Standing instructions are the owner's; web visitors get the bare persona."""
+    s = config.PERSONA.format(name=name or config.OWNER)
+    for title, text in (("Standing instructions", settings["instructions"] if owner else ""),
                         ("For this session", extra)):
         if text:
             s += f"\n{title}: {text}"
@@ -89,12 +90,11 @@ def remember(model, msgs, params, reply):
     (CACHE / _key(model, msgs, params)).write_text(reply)
 
 
-def stream(provider, model, msgs, params):
-    """provider.stream with the cache in front. Only complete replies are cached."""
+def stream(provider, model, msgs, params, info):
+    """provider.stream with the cache in front; sets info["cached"]. Only complete replies are cached."""
     hit = cached(model, msgs, params)
-    provider.cache_hit = hit is not None
+    info["cached"] = hit is not None
     if hit is not None:
-        provider.last_model = model
         yield hit
         return
     reply = ""
@@ -104,9 +104,9 @@ def stream(provider, model, msgs, params):
     remember(model, msgs, params, reply)
 
 
-def footer(provider, msgs, reply):
-    """'model · ≈120 in · 45 out' (or 'cached, 0 tokens') shown under each reply."""
-    if getattr(provider, "cache_hit", False):
-        return f"{provider.last_model} · cached, 0 tokens"
+def footer(info, msgs, reply):
+    """'≈120 in · 45 out' (or 'cached, 0 tokens') shown under each reply."""
+    if info.get("cached"):
+        return "cached, 0 tokens"
     sent = sum(tokens(m["content"]) for m in msgs)
-    return f"{provider.last_model} · ≈{sent} in · {tokens(reply)} out"
+    return f"≈{sent} in · {tokens(reply)} out"

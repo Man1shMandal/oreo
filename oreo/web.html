@@ -109,7 +109,7 @@
   <div class="brand"><i></i>oreo</div>
   <button id="new">+ New chat</button>
   <nav id="chats"></nav>
-  <div class="side-foot"><button id="open-settings">Settings</button> · <span id="usage"></span></div>
+  <div class="side-foot"><button id="who" title="Not you? Change name"></button><span id="owner-only" hidden> · <button id="open-settings">Settings</button> · <span id="usage"></span></span></div>
 </aside>
 
 <main>
@@ -120,9 +120,18 @@
       <textarea id="input" rows="1" placeholder="Message Oreo" autofocus></textarea>
       <button id="send" type="submit" title="Send (Enter)">↑</button>
     </div>
-    <div class="hint">Enter to send · Shift+Enter for a new line · @path attaches a file (sent once; @ it again if needed later)</div>
+    <div class="hint">Enter to send · Shift+Enter for a new line<span id="file-hint" hidden> · @path attaches a file (sent once; @ it again if needed later)</span></div>
   </form>
 </main>
+
+<dialog id="hello">
+  <form method="dialog" id="hello-form">
+    <h2>Hi, I'm Oreo.</h2>
+    <label for="hello-name">What's your name?</label>
+    <input id="hello-name" maxlength="30" autocomplete="given-name" required>
+    <div class="actions"><span class="spacer"></span><button class="btn primary">Start</button></div>
+  </form>
+</dialog>
 
 <dialog id="settings">
   <h2>Settings</h2>
@@ -152,10 +161,13 @@ let state = null, chatId = null, controller = null;
 
 // ---------- api
 
+let me = localStorage.getItem("oreo-name") || "";
+const who = () => ({"X-Oreo-User": encodeURIComponent(me)});
+
 async function api(path, opts = {}) {
   const r = await fetch("/api/" + path, {
     method: opts.method || (opts.body ? "POST" : "GET"),
-    headers: opts.body ? {"Content-Type": "application/json"} : {},
+    headers: {...who(), ...(opts.body ? {"Content-Type": "application/json"} : {})},
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
   const d = await r.json();
@@ -253,7 +265,7 @@ function addMsg(role, content, meta) {
 }
 
 function showEmpty() {
-  $("#msgs").innerHTML = `<div class="empty"><b>Hey Manish.</b>What are we working on?</div>`;
+  $("#msgs").innerHTML = `<div class="empty"><b>Hey ${esc(me.split(" ")[0])}.</b>What are we working on?</div>`;
 }
 
 const atBottom = () => { const l = $("#log"); return l.scrollHeight - l.scrollTop - l.clientHeight < 80; };
@@ -313,7 +325,10 @@ const updateSend = () => { $("#send").disabled = !controller && !$("#input").val
 async function send() {
   const text = $("#input").value.trim();
   if (!text) return;
-  if (!state.has_key) return openSettings("Paste your ABB API key first (it starts with sk-).");
+  if (!state.has_key) {
+    if (state.owner) return openSettings("Paste your ABB API key first (it starts with sk-).");
+    return alert("Oreo isn't set up yet. Ask the owner to add an API key.");
+  }
   $("#input").value = ""; grow();
   const userEl = addMsg("user", text);
   const el = addMsg("assistant", "");
@@ -328,7 +343,7 @@ async function send() {
   try {
     const r = await fetch("/api/chat", {
       method: "POST", signal: controller.signal,
-      headers: {"Content-Type": "application/json"},
+      headers: {...who(), "Content-Type": "application/json"},
       body: JSON.stringify({id: chatId, model: $("#model").value, text}),
     });
     if (!r.ok) throw new Error((await r.json()).error);
@@ -373,7 +388,7 @@ async function send() {
 
 function fillModels(sel, value) {
   sel.innerHTML = Object.entries(state.models)
-    .map(([short, id]) => `<option value="${esc(id)}">${esc(short)} · ${esc(id)}</option>`).join("");
+    .map(([short, id]) => `<option value="${esc(id)}">${esc(short)}</option>`).join("");
   sel.value = value;
 }
 
@@ -444,14 +459,35 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape" && controller) controller.abort();
 });
 
+function askName() {
+  $("#hello-name").value = me;
+  $("#hello").showModal();
+  return new Promise(done => {
+    $("#hello").addEventListener("close", function closed() {
+      const name = $("#hello-name").value.trim().slice(0, 30);
+      if (!name) { $("#hello").showModal(); return; }   // Esc doesn't skip it
+      $("#hello").removeEventListener("close", closed);
+      me = name;
+      localStorage.setItem("oreo-name", me);
+      $("#who").textContent = me;
+      done();
+    });
+  });
+}
+
+$("#who").onclick = async () => { await askName(); newChat(); };
+
 (async () => {
+  if (!me) await askName();
+  $("#who").textContent = me;
   state = await api("state");
   fillModels($("#model"), state.settings.model);
+  $("#owner-only").hidden = $("#file-hint").hidden = !state.owner;
   const id = location.hash.slice(1);
   if (id) await openChat(id).catch(newChat); else newChat();
-  loadUsage();
+  if (state.owner) loadUsage();
   updateSend();
-  if (!state.has_key) openSettings("Welcome to Oreo. Paste your ABB API key to get started.");
+  if (!state.has_key && state.owner) openSettings("Welcome to Oreo. Paste your ABB API key to get started.");
 })();
 </script>
 </body>

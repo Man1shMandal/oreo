@@ -47,12 +47,13 @@ class Session:
         self.chat.messages.append({"role": "user", "content": lean.squeeze(text)})
         system = lean.system_prompt(self.settings, self.extra_system)
         msgs = lean.build(self.chat, system, self.settings["context"])
+        info = {}
 
         reply = ""
         self.out("")
         try:
             with Live(Markdown(""), console=self.console, refresh_per_second=12, vertical_overflow="visible") as live:
-                for piece in lean.stream(self.provider, self.model, msgs, self.params):
+                for piece in lean.stream(self.provider, self.model, msgs, self.params, info):
                     reply += piece
                     live.update(Markdown(reply))
         except KeyboardInterrupt:
@@ -62,7 +63,7 @@ class Session:
             self.chat.messages.pop()
             return
         self.chat.messages.append({"role": "assistant", "content": reply})
-        self.out(f"[dim]{lean.footer(self.provider, msgs, reply)}[/]\n")
+        self.out(f"[dim]{self.provider.last_model} · {lean.footer(info, msgs, reply)}[/]\n")
         if lean.needs_compact(self.chat, self.settings["context"]):
             try:
                 lean.compact(self.provider, self.chat)
