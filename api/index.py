@@ -49,3 +49,10 @@ class handler(ChatHandler, HostedHandler):
             super().do_POST()
         else:
             self.reply(404, {"error": "Not found."})
+
+
+    def do_DELETE(self):
+        if urlsplit(self.path).path == '/api/conversations':
+            self.hosted_DELETE('/api/conversations')
+        else:
+            self.reply(404, {"error": "Not found."})

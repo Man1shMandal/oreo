@@ -16,7 +16,7 @@ const controls = () => {
   composer.disabled = busy || loading || !ready;
   for (const id of ['attach', 'web', 'model', 'new-chat', 'open-settings']) $('#' + id).disabled = blocked;
   $('#sign-out').disabled = busy;
-  for (const button of $('#history').children) button.disabled = busy || loading;
+  for (const button of $('#history').querySelectorAll('button')) button.disabled = busy || loading;
 };
 const token = async () => {
   const { data, error } = await supabase.auth.getSession();
@@ -76,9 +76,13 @@ function render() {
 function renderSidebar() {
   $('#history').replaceChildren();
   for (const row of conversations) {
-    const button = document.createElement('button'); button.textContent = row.title; button.title = row.title;
-    button.classList.toggle('active', row.id === chatId); button.setAttribute('aria-current', row.id === chatId ? 'true' : 'false');
-    button.onclick = () => select(row); $('#history').append(button);
+    const item = document.createElement('div'); item.className = 'history-row';
+    const button = document.createElement('button'); button.className = 'chat-open'; button.textContent = row.title; button.title = row.title;
+    item.classList.toggle('active', row.id === chatId); button.setAttribute('aria-current', row.id === chatId ? 'true' : 'false');
+    button.onclick = () => select(row);
+    const remove = document.createElement('button'); remove.className = 'chat-delete'; remove.type = 'button'; remove.textContent = '×';
+    remove.title = 'Delete chat'; remove.setAttribute('aria-label', 'Delete chat: ' + row.title); remove.onclick = event => { event.stopPropagation(); void deleteConversation(row); };
+    item.append(button, remove); $('#history').append(item);
   }
   $('#chat-title').textContent = conversations.find(row => row.id === chatId)?.title || 'New chat'; controls();
 }
@@ -91,6 +95,20 @@ async function account(expected = epoch) {
 }
 function clearFiles() { for (const file of pending) if (file.preview) URL.revokeObjectURL(file.preview); pending = []; tray(); }
 function resetDraft() { for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); }
+async function deleteConversation(row) {
+  if (busy || loading || reading || !confirm('Delete this chat? This cannot be undone.')) return;
+  const expected = epoch; loading = true; controls(); notify('Deleting chat…');
+  try {
+    await api('/api/conversations?id=' + encodeURIComponent(row.id), { method: 'DELETE' });
+    if (expected !== epoch) return;
+    conversations = conversations.filter(item => item.id !== row.id);
+    if (chatId === row.id) {
+      ++epoch; chatId = null; rows = []; resetDraft(); render();
+    }
+    renderSidebar(); notify('');
+  } catch (error) { if (expected === epoch) notify(error.message); }
+  finally { loading = false; controls(); }
+}
 async function select(row) {
   if (busy || loading || reading) return;
   const expected = ++epoch; loading = true; controls(); document.body.classList.remove('drawer'); notify('Loading chat…');

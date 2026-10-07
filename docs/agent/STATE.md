@@ -79,3 +79,17 @@ Sending a message now scrolls the chat to the new assistant placeholder before
 waiting for the server. Streamed text then follows the reply while the reader is
 near the bottom. This prevents the welcome screen from staying in view while a
 reply is appended below it. No automated tests run.
+
+
+## 2026-10-07 — Delete saved chats
+Added a delete control to each sidebar conversation and an authenticated
+DELETE /api/conversations?id=… route. The server filters deletion by both chat
+and signed-in user; conversation message rows cascade with the parent. Deleting
+the open chat returns the user to a fresh chat. No automated tests run.
+
+
+## 2026-10-07 — Show reply preparation progress
+The chat stream now starts after authentication and reports account check,
+conversation setup, attachment reading, web search, and model connection
+phases. This makes the wait before the first answer token visible instead of
+showing only a generic thinking status. No automated tests run.

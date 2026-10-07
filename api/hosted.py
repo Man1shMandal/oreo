@@ -60,3 +60,25 @@ class HostedHandler:
             self.reply(400, {'error': 'Send a valid conversation ID.'})
         except Exception:
             self.reply(503, {'error': 'Oreo is unavailable right now. Try again shortly.'})
+
+
+    def hosted_DELETE(self, route):
+        try:
+            user, _profile = identity(self.headers)
+            query = parse_qs(urlsplit(self.path).query)
+            if 'id' not in query:
+                raise AccessError(400, 'Choose a conversation to delete.')
+            chat_id = conversation_id(query['id'][0])
+            rows = database(
+                f"conversations?id=eq.{chat_id}&user_id=eq.{user['id']}&select=id",
+                'DELETE',
+            )
+            if not rows:
+                raise AccessError(404, 'Conversation not found.')
+            self.reply(200, {'deleted': True, 'id': chat_id})
+        except AccessError as error:
+            self.reply(error.status, {'error': error.message})
+        except (ValueError, TypeError, AttributeError):
+            self.reply(400, {'error': 'Send a valid conversation ID.'})
+        except Exception:
+            self.reply(503, {'error': 'Oreo is unavailable right now. Try again shortly.'})
