@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Oreo</title>
+    <style>
+      :root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: #111; color: #f3f0e8; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; }
+      main { width: min(680px, calc(100% - 32px)); }
+      h1 { font-size: clamp(3rem, 12vw, 6rem); margin: 0; letter-spacing: -.1em; }
+      p { color: #a9a59c; line-height: 1.6; }
+      #chat, #auth { margin-top: 32px; }
+      textarea, input { box-sizing: border-box; width: 100%; border: 1px solid #4a4740; background: #191816; color: inherit; padding: 14px; font: inherit; border-radius: 8px; }
+      textarea { min-height: 110px; resize: vertical; }
+      button { margin-top: 10px; border: 1px solid #f3f0e8; border-radius: 999px; background: #f3f0e8; color: #111; padding: 10px 18px; font: inherit; cursor: pointer; }
+      button.secondary { background: transparent; color: inherit; border-color: #4a4740; margin-left: 6px; }
+      #answer { white-space: pre-wrap; line-height: 1.7; margin-top: 26px; }
+      #status { min-height: 1.5em; color: #a9a59c; }
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>oreo</h1>
+      <p>A small personal AI by Manish.</p>
+      <section id="auth">
+        <p>Sign in or create your account. New accounts need approval before they can use OREO.</p>
+        <input id="email" type="email" autocomplete="email" placeholder="email">
+        <input id="password" type="password" autocomplete="current-password" placeholder="password" style="margin-top:8px">
+        <button id="sign-in">sign in</button><button id="sign-up" class="secondary">create account</button>
+      </section>
+      <section id="chat" class="hidden">
+        <p id="who"></p>
+        <textarea id="message" placeholder="Ask Oreo anything"></textarea>
+        <button id="send">send</button><button id="sign-out" class="secondary">sign out</button>
+        <p id="status"></p>
+        <div id="answer"></div>
+      </section>
+    </main>
+    <script type="module">
+      import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+      const config = await fetch('/api/config').then(r => r.json());
+      const supabase = createClient(config.supabaseUrl, config.supabasePublishableKey);
+      const auth = document.querySelector('#auth'), chat = document.querySelector('#chat');
+      const status = document.querySelector('#status'), answer = document.querySelector('#answer');
+      const show = session => {
+        auth.classList.toggle('hidden', !!session); chat.classList.toggle('hidden', !session);
+        document.querySelector('#who').textContent = session ? session.user.email : '';
+      };
+      const session = (await supabase.auth.getSession()).data.session; show(session);
+      supabase.auth.onAuthStateChange((_event, next) => show(next));
+      const credentials = () => ({ email: document.querySelector('#email').value.trim(), password: document.querySelector('#password').value });
+      document.querySelector('#sign-in').onclick = async () => { const { error } = await supabase.auth.signInWithPassword(credentials()); status.textContent = error?.message || ''; };
+      document.querySelector('#sign-up').onclick = async () => { const { error } = await supabase.auth.signUp(credentials()); status.textContent = error?.message || 'Check your email to confirm your account.'; };
+      document.querySelector('#sign-out').onclick = () => supabase.auth.signOut();
+      document.querySelector('#send').onclick = async () => {
+        const message = document.querySelector('#message').value.trim(); if (!message) return;
+        status.textContent = 'thinking…'; answer.textContent = '';
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ message }) });
+        const data = await response.json(); status.textContent = data.error || ''; answer.textContent = data.reply || '';
+      };
+    </script>
+  </body>
+</html>
