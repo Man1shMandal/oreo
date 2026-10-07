@@ -151,6 +151,7 @@ async function send() {
   const expected = epoch, text = composer.value.trim(), files = [...pending];
   const outgoing = { role: 'user', content: { text, files } };
   busy = true; controls(); tray(); notify(files.length ? 'Reading files…' : web ? 'Searching the web…' : 'Thinking…');
+  composer.value = ''; composer.style.height = 'auto';
   timeline.querySelector('.welcome')?.remove();
   const userEl = message(outgoing); timeline.append(userEl);
   const replyEl = message({ role: 'assistant', content: { text: '' } }); replyEl.classList.add('streaming'); timeline.append(replyEl);
@@ -194,6 +195,7 @@ async function send() {
   } catch (error) {
     if (expected === epoch) {
       userEl.remove(); replyEl.remove(); if (!rows.length) render();
+      if (!composer.value) { composer.value = text; composer.dispatchEvent(new Event('input')); }
       chatId = receivedChat;
       try { await account(expected); } catch {}
       notify(error.message);
