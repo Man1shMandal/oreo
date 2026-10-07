@@ -30,4 +30,5 @@ Chats are saved in `~/.oreo/chats`.
 - `oreo/cli.py`: chat loop
 - `oreo/files.py`: `@file` attachments
 - `oreo/store.py`: saved chats
+- `oreo/web.py` + `oreo/web.html`: the browser UI (local only, no extra installs)
 - `oreo/settings.py`: saved settings and the Keychain key

@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>oreo</title>
+<style>
+  :root {
+    --bg: #f6f1e7; --panel: #efe8da; --ink: #1d1a17; --muted: #7a7166;
+    --line: #e2d9c8; --you: #1d1a17; --you-ink: #f6f1e7; --code: #ebe3d3; --accent: #1d1a17;
+    --font: ui-sans-serif, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141210; --panel: #1b1916; --ink: #ece5d8; --muted: #8d8478;
+      --line: #2a2723; --you: #ece5d8; --you-ink: #141210; --code: #211e1b; --accent: #ece5d8;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--font); }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; background: none; border: 0; padding: 0; }
+
+  /* sidebar */
+  aside { width: 240px; flex: none; display: flex; flex-direction: column; background: var(--panel);
+          border-right: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 8px; padding: 18px 18px 12px; font-weight: 700;
+           letter-spacing: .02em; }
+  .brand i { width: 14px; height: 14px; border-radius: 50%; background: var(--ink);
+             box-shadow: inset 0 0 0 3px var(--bg); }
+  #new { margin: 0 12px 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px;
+         text-align: left; }
+  #new:hover, #chats a:hover { background: var(--line); }
+  #chats { flex: 1; overflow-y: auto; padding: 0 8px; }
+  #chats a { display: flex; align-items: center; padding: 6px 10px; border-radius: 6px; color: inherit;
+             text-decoration: none; font-size: 14px; }
+  #chats a span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #chats a.on { background: var(--line); }
+  #chats a button { visibility: hidden; color: var(--muted); padding: 0 4px; }
+  #chats a:hover button { visibility: visible; }
+  .side-foot { padding: 12px 18px; font-size: 13px; color: var(--muted); }
+  .side-foot button:hover { color: var(--ink); }
+
+  /* main */
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  header { display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 12px 20px; }
+  header select { background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+  #log { flex: 1; overflow-y: auto; }
+  .col { width: 100%; max-width: 760px; margin: 0 auto; padding: 0 24px; }
+  .msg { margin: 22px 0; }
+  .msg.user { display: flex; flex-direction: column; align-items: flex-end; }
+  .msg.user .body { background: var(--you); color: var(--you-ink); padding: 10px 14px;
+                    border-radius: 14px 14px 4px 14px; max-width: 85%; white-space: pre-wrap; }
+  .chips { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .meta.err { color: #c0392b; }
+  .empty { text-align: center; color: var(--muted); margin-top: 28vh; }
+  .empty b { display: block; color: var(--ink); font-size: 22px; margin-bottom: 4px; }
+
+  .md > :first-child { margin-top: 0; } .md > :last-child { margin-bottom: 0; }
+  .md p, .md ul, .md ol, .md pre, .md blockquote, .md table { margin: 0 0 12px; }
+  .md h1, .md h2, .md h3, .md h4 { margin: 18px 0 8px; line-height: 1.3; }
+  .md h1 { font-size: 1.3em; } .md h2 { font-size: 1.15em; } .md h3, .md h4 { font-size: 1em; }
+  .md ul, .md ol { padding-left: 22px; }
+  .md code { font: 13px var(--mono); background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  .md pre { position: relative; background: var(--code); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+  .md pre code { background: none; padding: 0; }
+  .md pre button { position: absolute; top: 6px; right: 8px; font-size: 12px; color: var(--muted); }
+  .md blockquote { border-left: 3px solid var(--line); padding-left: 12px; color: var(--muted); }
+  .md table { border-collapse: collapse; font-size: 14px; display: block; overflow-x: auto; }
+  .md th, .md td { border: 1px solid var(--line); padding: 4px 10px; text-align: left; }
+  .md a { color: inherit; }
+  .md hr { border: 0; border-top: 1px solid var(--line); }
+
+  /* composer */
+  form.compose { padding: 8px 0 20px; }
+  .box { display: flex; align-items: flex-end; gap: 8px; border: 1px solid var(--line); border-radius: 14px;
+         background: var(--panel); padding: 8px 8px 8px 14px; }
+  .box textarea { flex: 1; border: 0; outline: 0; background: none; resize: none; max-height: 40vh;
+                  padding: 4px 0; line-height: 1.5; }
+  #send { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: var(--bg);
+          font-size: 16px; flex: none; }
+  #send:disabled { opacity: .3; cursor: default; }
+  .hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 6px; }
+
+  /* settings */
+  dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--bg); color: var(--ink);
+           width: min(460px, 92vw); padding: 22px; }
+  dialog::backdrop { background: rgba(0,0,0,.35); }
+  dialog h2 { margin: 0 0 14px; font-size: 17px; }
+  dialog label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  dialog input, dialog select, dialog textarea { width: 100%; background: var(--panel); border: 1px solid var(--line);
+           border-radius: 8px; padding: 7px 10px; }
+  dialog textarea { min-height: 80px; resize: vertical; }
+  .row { display: flex; gap: 12px; } .row > div { flex: 1; }
+  .actions { display: flex; align-items: center; gap: 10px; margin-top: 18px; }
+  .actions .spacer { flex: 1; }
+  .btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); }
+  .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  #status { font-size: 13px; color: var(--muted); margin-top: 12px; min-height: 1.2em; }
+
+  @media (max-width: 720px) { aside { display: none; } }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><i></i>oreo</div>
+  <button id="new">+ New chat</button>
+  <nav id="chats"></nav>
+  <div class="side-foot"><button id="open-settings">Settings</button> · <span id="usage"></span></div>
+</aside>
+
+<main>
+  <header><select id="model" title="Model for this chat"></select></header>
+  <div id="log"><div class="col" id="msgs"></div></div>
+  <form class="compose col" id="form">
+    <div class="box">
+      <textarea id="input" rows="1" placeholder="Message Oreo" autofocus></textarea>
+      <button id="send" type="submit" title="Send (Enter)">↑</button>
+    </div>
+    <div class="hint">Enter to send · Shift+Enter for a new line · @path attaches a file</div>
+  </form>
+</main>
+
+<dialog id="settings">
+  <h2>Settings</h2>
+  <label>API key</label>
+  <input id="s-key" type="password" placeholder="saved in Keychain · paste to replace" autocomplete="off">
+  <label>Default model</label>
+  <select id="s-model"></select>
+  <div class="row">
+    <div><label>Temperature (0–2)</label><input id="s-temp" type="number" min="0" max="2" step="0.1"></div>
+    <div><label>Reply length (tokens)</label><input id="s-max" type="number" min="64" step="256"></div>
+  </div>
+  <label>Instructions for every chat</label>
+  <textarea id="s-instr" placeholder="e.g. I code in Python and C++; keep answers short."></textarea>
+  <div id="status"></div>
+  <div class="actions">
+    <button class="btn" id="s-test" type="button">Test connection</button>
+    <span class="spacer"></span>
+    <button class="btn" id="s-close" type="button">Close</button>
+    <button class="btn primary" id="s-save" type="button">Save</button>
+  </div>
+</dialog>
+
+<script>
+const $ = s => document.querySelector(s);
+let state = null, chatId = null, controller = null;
+
+// ---------- api
+
+async function api(path, opts = {}) {
+  const r = await fetch("/api/" + path, {
+    method: opts.method || (opts.body ? "POST" : "GET"),
+    headers: opts.body ? {"Content-Type": "application/json"} : {},
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || r.statusText);
+  return d;
+}
+
+// ---------- markdown (small and safe: escape first, then format)
+
+const esc = s => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function inline(s) {
+  const codes = [];
+  s = s.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+  s = esc(s)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*\w])\*(?!\s)(.+?)\*(?!\w)/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|\s)(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${esc(codes[i])}</code>`);
+}
+
+function blocks(text) {
+  const lines = text.split("\n"), out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (!l.trim()) { i++; continue; }
+    let m;
+    if ((m = l.match(/^(#{1,4})\s+(.*)/))) { out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); i++; continue; }
+    if (/^(-{3,}|\*{3,})\s*$/.test(l)) { out.push("<hr>"); i++; continue; }
+    if (/^\s*>/.test(l)) {
+      const q = []; while (i < lines.length && /^\s*>/.test(lines[i])) q.push(lines[i++].replace(/^\s*>\s?/, ""));
+      out.push(`<blockquote>${blocks(q.join("\n"))}</blockquote>`); continue;
+    }
+    if (/^\s*\|.*\|\s*$/.test(l) && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1] || "")) {
+      const row = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => inline(c.trim()));
+      const head = row(l); i += 2; const body = [];
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) body.push(row(lines[i++]));
+      out.push(`<table><tr>${head.map(c => `<th>${c}</th>`).join("")}</tr>` +
+               body.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("") + "</table>");
+      continue;
+    }
+    if ((m = l.match(/^\s*([-*+]|\d+[.)])\s+/))) {
+      const ordered = /\d/.test(m[1]), items = [];
+      while (i < lines.length && lines[i].trim()) {
+        const lm = lines[i].match(/^\s*([-*+]|\d+[.)])\s+(.*)/);
+        if (lm) items.push(lm[2]); else items[items.length - 1] += " " + lines[i].trim();
+        i++;
+      }
+      const tag = ordered ? "ol" : "ul";
+      out.push(`<${tag}>${items.map(x => `<li>${inline(x)}</li>`).join("")}</${tag}>`); continue;
+    }
+    const p = [];
+    while (i < lines.length && lines[i].trim() && !/^(#{1,4}\s|\s*>|\s*([-*+]|\d+[.)])\s)/.test(lines[i])) p.push(lines[i++]);
+    if (!p.length) p.push(lines[i++]);
+    out.push(`<p>${p.map(inline).join("<br>")}</p>`);
+  }
+  return out.join("");
+}
+
+function markdown(text) {
+  let html = "", inCode = false;
+  // split with a capture group alternates: text, lang, code-and-rest, lang, ...
+  const segs = text.split(/(^```[^\n]*$)/m);
+  for (const seg of segs) {
+    if (/^```/.test(seg)) { inCode = !inCode; html += inCode ? "<pre><code>" : "</code><button>copy</button></pre>"; continue; }
+    html += inCode ? esc(seg.replace(/^\n/, "").replace(/\n$/, "")) : blocks(seg);
+  }
+  if (inCode) html += "</code><button>copy</button></pre>";
+  return html;
+}
+
+// ---------- rendering
+
+function splitFiles(content) {
+  const files = [];
+  const text = content.replace(/\n\n<file path="([^"]*)">\n[\s\S]*?\n<\/file>/g, (_, p) => { files.push(p); return ""; });
+  return {text, files};
+}
+
+function addMsg(role, content, meta) {
+  $(".empty")?.remove();
+  const el = document.createElement("div");
+  el.className = "msg " + role;
+  if (role === "user") {
+    const {text, files} = splitFiles(content);
+    el.innerHTML = `<div class="body"></div>` + (files.length ? `<div class="chips">attached ${files.map(esc).join(", ")}</div>` : "");
+    el.querySelector(".body").textContent = text;
+  } else {
+    el.innerHTML = `<div class="md">${markdown(content)}</div>` + (meta ? `<div class="meta">${esc(meta)}</div>` : "");
+  }
+  $("#msgs").appendChild(el);
+  return el;
+}
+
+function showEmpty() {
+  $("#msgs").innerHTML = `<div class="empty"><b>Hey Manish.</b>What are we working on?</div>`;
+}
+
+const atBottom = () => { const l = $("#log"); return l.scrollHeight - l.scrollTop - l.clientHeight < 80; };
+const scrollDown = () => { $("#log").scrollTop = $("#log").scrollHeight; };
+
+async function loadChats() {
+  const chats = await api("chats");
+  $("#chats").innerHTML = "";
+  for (const c of chats) {
+    const a = document.createElement("a");
+    a.href = "#" + c.id;
+    a.className = c.id === chatId ? "on" : "";
+    a.innerHTML = `<span></span><button title="Delete">×</button>`;
+    a.querySelector("span").textContent = c.title;
+    a.onclick = e => { e.preventDefault(); openChat(c.id); };
+    a.querySelector("button").onclick = async e => {
+      e.preventDefault(); e.stopPropagation();
+      if (!confirm(`Delete "${c.title}"?`)) return;
+      await api("chats/" + c.id, {method: "DELETE"});
+      if (c.id === chatId) newChat(); else loadChats();
+    };
+    $("#chats").appendChild(a);
+  }
+}
+
+async function openChat(id) {
+  if (controller) controller.abort();
+  const c = await api("chats/" + id);
+  chatId = id;
+  history.replaceState(null, "", "#" + id);
+  $("#msgs").innerHTML = "";
+  for (const m of c.messages) addMsg(m.role, m.content);
+  if (!c.messages.length) showEmpty();
+  scrollDown();
+  loadChats();
+  $("#input").focus();
+}
+
+function newChat() {
+  if (controller) controller.abort();
+  chatId = null;
+  history.replaceState(null, "", location.pathname);
+  showEmpty();
+  loadChats();
+  $("#input").focus();
+}
+
+// ---------- sending
+
+function setBusy(busy) {
+  $("#send").textContent = busy ? "■" : "↑";
+  $("#send").title = busy ? "Stop" : "Send (Enter)";
+  updateSend();
+}
+const updateSend = () => { $("#send").disabled = !controller && !$("#input").value.trim(); };
+
+async function send() {
+  const text = $("#input").value.trim();
+  if (!text) return;
+  if (!state.has_key) return openSettings("Paste your ABB API key first (it starts with sk-).");
+  $("#input").value = ""; grow();
+  const userEl = addMsg("user", text);
+  const el = addMsg("assistant", "");
+  const md = el.querySelector(".md");
+  md.innerHTML = `<span class="meta">…</span>`;
+  scrollDown();
+
+  controller = new AbortController();
+  setBusy(true);
+  let reply = "", buf = "";
+  const meta = (t, err) => { el.insertAdjacentHTML("beforeend", `<div class="meta${err ? " err" : ""}">${esc(t)}</div>`); };
+  try {
+    const r = await fetch("/api/chat", {
+      method: "POST", signal: controller.signal,
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: chatId, model: $("#model").value, text}),
+    });
+    if (!r.ok) throw new Error((await r.json()).error);
+    const reader = r.body.getReader(), dec = new TextDecoder();
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let cut;
+      while ((cut = buf.indexOf("\n\n")) >= 0) {
+        const line = buf.slice(0, cut); buf = buf.slice(cut + 2);
+        if (!line.startsWith("data: ")) continue;
+        const ev = JSON.parse(line.slice(6));
+        if (ev.chat) {
+          const isNew = chatId !== ev.chat;
+          chatId = ev.chat; history.replaceState(null, "", "#" + chatId);
+          if (ev.attached.length) userEl.insertAdjacentHTML("beforeend", `<div class="chips">attached ${ev.attached.map(esc).join(", ")}</div>`);
+          for (const e of ev.errors) userEl.insertAdjacentHTML("beforeend", `<div class="chips">${esc(e)}</div>`);
+          if (isNew) loadChats();
+        } else if (ev.text !== undefined) {
+          const stick = atBottom();
+          reply += ev.text; md.innerHTML = markdown(reply);
+          if (stick) scrollDown();
+        } else if (ev.done) {
+          meta(ev.done);
+        } else if (ev.error) {
+          throw new Error(ev.error);
+        }
+      }
+    }
+  } catch (e) {
+    if (e.name === "AbortError") { if (!reply) el.remove(); else meta("stopped"); }
+    else { if (!reply) md.innerHTML = ""; meta(e.message, true); }
+  } finally {
+    controller = null;
+    setBusy(false);
+    $("#input").focus();
+  }
+}
+
+// ---------- settings
+
+function fillModels(sel, value) {
+  sel.innerHTML = Object.entries(state.models)
+    .map(([short, id]) => `<option value="${esc(id)}">${esc(short)} · ${esc(id)}</option>`).join("");
+  sel.value = value;
+}
+
+function openSettings(msg = "") {
+  const s = state.settings;
+  $("#s-key").value = "";
+  $("#s-key").placeholder = state.has_key ? "saved in Keychain · paste to replace" : "paste your key (sk-…)";
+  fillModels($("#s-model"), s.model);
+  $("#s-temp").value = s.temperature;
+  $("#s-max").value = s.max_tokens;
+  $("#s-instr").value = s.instructions;
+  $("#status").textContent = msg;
+  $("#settings").showModal();
+  if (!state.has_key) $("#s-key").focus();
+}
+
+async function saveSettings() {
+  try {
+    const key = $("#s-key").value.trim();
+    if (key) { await api("key", {body: {key}}); }
+    const prevDefault = state.settings.model;
+    state = await api("settings", {body: {
+      model: $("#s-model").value, temperature: +$("#s-temp").value,
+      max_tokens: +$("#s-max").value, instructions: $("#s-instr").value,
+    }});
+    if ($("#model").value === prevDefault) $("#model").value = state.settings.model;
+    $("#settings").close();
+    loadUsage();
+  } catch (e) { $("#status").textContent = e.message; }
+}
+
+async function loadUsage() {
+  if (!state.has_key) { $("#usage").textContent = "no key"; return; }
+  try {
+    const d = await api("usage");
+    $("#usage").textContent = `${d.percentage} used`;
+    $("#usage").title = `${d.month_usage.toLocaleString()} of ${d.month_limit.toLocaleString()} tokens this month`;
+  } catch { $("#usage").textContent = ""; }
+}
+
+// ---------- wiring
+
+function grow() { const t = $("#input"); t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; updateSend(); }
+
+$("#input").addEventListener("input", grow);
+$("#input").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!controller) send(); }
+});
+$("#form").onsubmit = e => { e.preventDefault(); controller ? controller.abort() : send(); };
+$("#new").onclick = newChat;
+$("#open-settings").onclick = () => openSettings();
+$("#s-close").onclick = () => $("#settings").close();
+$("#s-save").onclick = saveSettings;
+$("#s-test").onclick = async () => {
+  $("#status").textContent = "testing…";
+  try { $("#status").textContent = (await api("test", {body: {}})).message; }
+  catch (e) { $("#status").textContent = "failed: " + e.message; }
+};
+$("#msgs").addEventListener("click", e => {
+  if (e.target.matches("pre button")) {
+    navigator.clipboard.writeText(e.target.previousElementSibling.textContent);
+    e.target.textContent = "copied"; setTimeout(() => e.target.textContent = "copy", 1200);
+  }
+});
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); newChat(); }
+  if (e.key === "Escape" && controller) controller.abort();
+});
+
+(async () => {
+  state = await api("state");
+  fillModels($("#model"), state.settings.model);
+  const id = location.hash.slice(1);
+  if (id) await openChat(id).catch(newChat); else newChat();
+  loadUsage();
+  updateSend();
+  if (!state.has_key) openSettings("Welcome to Oreo. Paste your ABB API key to get started.");
+})();
+</script>
+</body>
+</html>
