@@ -155,6 +155,7 @@ async function send() {
   timeline.querySelector('.welcome')?.remove();
   const userEl = message(outgoing); timeline.append(userEl);
   const replyEl = message({ role: 'assistant', content: { text: '' } }); replyEl.classList.add('streaming'); timeline.append(replyEl);
+  stage.scrollTop = stage.scrollHeight;
   let reply = '', done = null, receivedChat = chatId;
   try {
     const response = await request('/api/chat', { method: 'POST', body: JSON.stringify({ message: text, conversation_id: chatId, files: files.map(({ name, type, data }) => ({ name, type, data })), model: $('#model').value, web, stream: true, settings: preferences }) });
