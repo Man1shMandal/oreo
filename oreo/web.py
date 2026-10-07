@@ -10,17 +10,20 @@ import json
 import os
 import re
 import socket
+import subprocess
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
 
-from . import config, files, lean, settings, store
+from . import attach, config, files, lean, research, settings, store
 from .provider import Provider
 
 PAGE = Path(__file__).with_name("web.html")
 PEOPLE = Path.home() / ".oreo" / "people"   # one chat folder per visitor
 CHAT_ID = re.compile(r"^[\w-]+$")
+UPLOAD = re.compile(r"^[0-9a-f]{24}\.(png|jpg|pdf)$")
+NAME = "oreo.local"   # announced on the network with Bonjour
 
 
 class App:
@@ -88,6 +91,8 @@ class Handler(BaseHTTPRequestHandler):
         """Only answer to our own address (blocks DNS rebinding) and our own pages (blocks CSRF)."""
         host = self.headers.get("Host", "")
         hostname, _, port = host.rpartition(":")
+        if not port.isdigit():   # no port in the URL means 80
+            hostname, port = host, "80"
         if port != str(self.port):
             return False
         hostname = hostname.strip("[]").lower()
@@ -160,6 +165,12 @@ class Handler(BaseHTTPRequestHandler):
         chats = store.recent(50, self.folder())
         self.send(200, [{"id": c.path.stem, "title": c.title} for c in chats])
 
+    def get_uploads(self, name):
+        if not UPLOAD.match(name):
+            raise ValueError("bad file name")
+        data = (self.folder() / "uploads" / name).read_bytes()
+        self.send(200, data, {"png": "image/png", "jpg": "image/jpeg", "pdf": "application/pdf"}[name[-3:]])
+
     def delete_chats(self, cid):
         self.chat_path(cid).unlink(missing_ok=True)
         self.send(200, {"ok": True})
@@ -226,7 +237,17 @@ class Handler(BaseHTTPRequestHandler):
         text, attached, errors = str(b.get("text", "")), [], []
         if self.owner:   # @path reads files on this Mac, so only the owner gets it
             text, attached, errors = files.expand(text)
-        chat.messages.append({"role": "user", "content": lean.squeeze(text)})
+        uploads = b.get("files") or []
+        blocks, images, bad = attach.process(uploads, folder / "uploads")
+        errors += bad
+        if not chat.title:
+            chat.title = (text.strip().splitlines() or [""])[0][:60] or ", ".join(u.get("name", "") for u in uploads)[:60]
+        msg = {"role": "user", "content": lean.squeeze("\n\n".join([text.strip()] + blocks))}
+        if images:
+            msg["images"] = images
+        if not msg["content"] and not images:
+            return self.send(400, {"error": "; ".join(errors) or "empty message"})
+        chat.messages.append(msg)
         chat.save()
 
         self.send_response(200)
@@ -240,14 +261,30 @@ class Handler(BaseHTTPRequestHandler):
 
         reply, info = "", {}
         try:
-            event({"chat": chat.path.stem, "title": chat.title, "attached": attached, "errors": errors})
+            event({"chat": chat.path.stem, "title": chat.title, "attached": attached, "errors": errors,
+                   "images": images})
             params = {k: app.settings[k] for k in config.DEFAULTS}
             system = lean.system_prompt(app.settings, name=self.name, owner=self.owner)
+            sources = self.research(chat, str(b.get("text", ""))) if b.get("web") else []
+            if sources:
+                event({"sources": [{"title": x["title"], "url": x["url"]} for x in sources]})
             msgs = lean.build(chat, system, app.settings["context"])
+            if sources:   # pages go with this request only; the chat keeps just the links
+                last = msgs[-1]["content"]
+                web = research.block(sources)
+                if isinstance(last, str):
+                    msgs[-1]["content"] = last + web
+                else:
+                    last[0]["text"] += web
+            if not isinstance(msgs[-1]["content"], str) and not model.startswith("claude"):
+                model = config.VISION_MODEL   # only Claude can see pictures through the gateway
             for piece in lean.stream(app.provider, model, msgs, params, info):
                 reply += piece
                 event({"text": piece})
-            chat.messages.append({"role": "assistant", "content": reply})
+            answer = {"role": "assistant", "content": reply}
+            if sources:
+                answer["sources"] = [{"title": x["title"], "url": x["url"]} for x in sources]
+            chat.messages.append(answer)
             chat.save()
             event({"done": lean.footer(info, msgs, reply)})
         except (BrokenPipeError, ConnectionResetError):
@@ -272,6 +309,20 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass  # next message just sends a shorter window
 
+    def research(self, chat, text):
+        """Search and read the web when the question needs it. Progress goes to the page as {status}."""
+        step = lambda s: self.wfile.write(f"data: {json.dumps({'status': s})}\n\n".encode()) or self.wfile.flush()
+        links = research.URL.findall(text)[:3]   # pasted links are read directly
+        try:
+            queries = [] if links else research.plan(self.app.provider, chat)
+        except Exception:
+            return []
+        if not queries and not links:
+            return []
+        sources = research.gather(queries, links, research.keywords(text + " " + " ".join(queries)), step)
+        step("writing")
+        return sources
+
     @staticmethod
     def drop_last(chat):
         chat.messages.pop()
@@ -281,19 +332,43 @@ class Handler(BaseHTTPRequestHandler):
             chat.path.unlink(missing_ok=True)
 
 
+def announce(port, ip):
+    """Publish oreo.local on the network via Bonjour (macOS dns-sd), so nobody needs the IP."""
+    try:
+        return subprocess.Popen(["dns-sd", "-P", "Oreo", "_http._tcp", "local", str(port), NAME, ip],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return None
+
+
 def main(argv=()):
-    port = next((int(a) for a in argv if a.isdigit()), 4747)
+    """Port 80 by default so the link is just http://oreo.local; falls back to 4747 if 80 is taken."""
     local = "--local" in argv
+    asked = next((int(a) for a in argv if a.isdigit()), None)
+    for port in [asked] if asked else [80, 4747]:
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1" if local else "0.0.0.0", port), Handler)
+            break
+        except OSError:
+            if asked or port == 4747:
+                raise
     Handler.app, Handler.port = App(), port
-    server = ThreadingHTTPServer(("127.0.0.1" if local else "0.0.0.0", port), Handler)
-    print(f"oreo web · on this Mac: http://127.0.0.1:{port}")
+    suffix = "" if port == 80 else f":{port}"
+    print(f"oreo web · on this Mac: http://localhost{suffix}")
+    bonjour = None
     if not local:
         ip = lan_ip()
-        print(f"           on your network: http://{ip or socket.gethostname()}:{port}")
+        bonjour = announce(port, ip) if ip else None
+        print(f"           on your network: http://{NAME if bonjour else ip or socket.gethostname()}{suffix}")
+        if ip:
+            print(f"           (or http://{ip}{suffix} on devices that don't know .local names)")
     print("           Ctrl-C to stop")
     if "--no-open" not in argv:
-        webbrowser.open(f"http://127.0.0.1:{port}")
+        webbrowser.open(f"http://localhost{suffix}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         pass
+    finally:
+        if bonjour:
+            bonjour.terminate()

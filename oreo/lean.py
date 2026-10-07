@@ -5,7 +5,7 @@ import json
 import re
 from pathlib import Path
 
-from . import config
+from . import attach, config
 
 CACHE = Path.home() / ".oreo" / "cache"
 FILE_BLOCK = re.compile(r'<file path="([^"]*)">\n(.*?)\n</file>', re.S)
@@ -39,7 +39,7 @@ def squeeze(text):
 
 def build(chat, system, budget):
     """System prompt + earlier-summary + the newest messages that fit in `budget` tokens.
-    Only the newest message keeps its attached files."""
+    Only the newest message keeps its attached files and images."""
     if chat.summary:
         system += f"\nEarlier in this chat: {chat.summary}"
     out, used = [], 0
@@ -48,6 +48,12 @@ def build(chat, system, budget):
         t = tokens(content)
         if out and used + t > budget:
             break
+        imgs = m.get("images")
+        if imgs and i == 0:
+            folder = chat.path.parent / "uploads"
+            content = [{"type": "text", "text": content}] + [attach.image_part(folder, n) for n in imgs]
+        elif imgs:
+            content += f"\n[{len(imgs)} image(s) were attached earlier]"
         out.append({"role": m["role"], "content": content})
         used += t
     out.reverse()
@@ -108,5 +114,6 @@ def footer(info, msgs, reply):
     """'≈120 in · 45 out' (or 'cached, 0 tokens') shown under each reply."""
     if info.get("cached"):
         return "cached, 0 tokens"
-    sent = sum(tokens(m["content"]) for m in msgs)
+    sent = sum(tokens(m["content"] if isinstance(m["content"], str) else m["content"][0]["text"])
+               for m in msgs)
     return f"≈{sent} in · {tokens(reply)} out"
