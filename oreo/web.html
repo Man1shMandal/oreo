@@ -143,6 +143,13 @@
   .actions .spacer { flex: 1; }
   .btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--line); }
   .btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  #usage-box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .usage-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  .usage-top b { color: var(--ink); }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); margin: 8px 0 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 3px; transition: width .6s;
+           background: linear-gradient(90deg, #22d3ee, #a78bfa, #f472b6); }
+  #usage-detail { font-size: 12px; color: var(--muted); }
   #status { font-size: 13px; color: var(--muted); margin-top: 12px; min-height: 1.2em; }
 
   @media (max-width: 720px) { aside { display: none; } }
@@ -153,7 +160,7 @@
   <div class="brand"><i></i>oreo</div>
   <button id="new">+ New chat</button>
   <nav id="chats"></nav>
-  <div class="side-foot"><button id="who" title="Not you? Change name"></button><span id="owner-only" hidden> · <button id="open-settings">Settings</button> · <span id="usage"></span></span></div>
+  <div class="side-foot"><button id="who" title="Not you? Change name"></button><span id="owner-only" hidden> · <button id="open-settings">Settings</button></span></div>
 </aside>
 
 <main>
@@ -183,6 +190,8 @@
 
 <dialog id="settings">
   <h2>Settings</h2>
+  <div id="usage-box"><div class="usage-top"><span>Usage this month</span><b id="usage">…</b></div>
+    <div class="bar"><i id="usage-bar"></i></div><div id="usage-detail"></div></div>
   <label>API key</label>
   <input id="s-key" type="password" placeholder="saved in Keychain · paste to replace" autocomplete="off">
   <label>Default model</label>
@@ -521,6 +530,7 @@ function openSettings(msg = "") {
   $("#s-instr").value = s.instructions;
   $("#status").textContent = msg;
   $("#settings").showModal();
+  loadUsage();
   if (!state.has_key) $("#s-key").focus();
 }
 
@@ -540,12 +550,13 @@ async function saveSettings() {
 }
 
 async function loadUsage() {
-  if (!state.has_key) { $("#usage").textContent = "no key"; return; }
+  if (!state.has_key) { $("#usage").textContent = "no key yet"; $("#usage-detail").textContent = ""; return; }
   try {
     const d = await api("usage");
     $("#usage").textContent = `${d.percentage} used`;
-    $("#usage").title = `${d.month_usage.toLocaleString()} of ${d.month_limit.toLocaleString()} tokens this month`;
-  } catch { $("#usage").textContent = ""; }
+    $("#usage-bar").style.width = Math.min(100, d.month_usage / d.month_limit * 100) + "%";
+    $("#usage-detail").textContent = `${d.month_usage.toLocaleString()} of ${d.month_limit.toLocaleString()} tokens · ${(d.month_limit - d.month_usage).toLocaleString()} left`;
+  } catch (e) { $("#usage").textContent = "couldn't load"; $("#usage-detail").textContent = e.message; }
 }
 
 // ---------- wiring
@@ -621,7 +632,6 @@ $("#who").onclick = async () => { await askName(); newChat(); };
   $("#owner-only").hidden = $("#file-hint").hidden = !state.owner;
   const id = location.hash.slice(1);
   if (id) await openChat(id).catch(newChat); else newChat();
-  if (state.owner) loadUsage();
   updateSend();
   if (!state.has_key && state.owner) openSettings("Welcome to Oreo. Paste your ABB API key to get started.");
 })();

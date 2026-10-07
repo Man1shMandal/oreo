@@ -62,7 +62,9 @@ class Handler(BaseHTTPRequestHandler):
 
     @property
     def owner(self):
-        return ipaddress.ip_address(self.client_address[0]).is_loopback
+        """A browser on this Mac, whether it came in via localhost or oreo.local (our own LAN address)."""
+        ip = self.client_address[0]
+        return ipaddress.ip_address(ip).is_loopback or ip == self.connection.getsockname()[0]
 
     @property
     def name(self):
