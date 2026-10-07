@@ -54,17 +54,11 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(self.post({'message': 'search', 'web': True, 'conversation_id': CHAT})[0], 404)
         search.assert_not_called()
 
-    @patch('api.chat.handler.search_web')
-    def test_quota_rejected_web_chat_does_not_search(self, search):
-        self.prepare.return_value = ([], {'error': 'limit'})
-        self.assertEqual(self.post({'message': 'search', 'web': True})[0], 429)
-        search.assert_not_called()
-
     @patch('api.chat.handler.search_web', return_value=[{'title': 'Source', 'url': 'https://example.com', 'text': 'Fresh fact'}])
     def test_web_sources_are_saved(self, search):
         self.assertEqual(self.post({'message': 'search', 'web': True})[0], 200)
         self.assertEqual(unpack(self.save.call_args.args[3])['sources'][0]['url'], 'https://example.com')
-        self.assertEqual(self.prepare.call_args.kwargs['extra_tokens'], 4000)
+        self.assertEqual(self.prepare.call_args.kwargs['settings']['context'], 'efficient')
 
     def stream_post(self):
         request = urllib.request.Request(f'http://127.0.0.1:{self.server.server_port}/api/chat',
@@ -91,18 +85,46 @@ class FeatureTests(unittest.TestCase):
     @patch('api.conversations.database')
     def test_document_survives_reopened_followup(self, database):
         document = pack('Read this', documents=['<file path="notes.txt">\n' + 'x' * 12000 + '\n</file>'], files=[{'name': 'notes.txt'}])
-        database.side_effect = [[{'id': CHAT}], [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': document}], {'conversation_id': CHAT}]
+        database.side_effect = [[{'id': CHAT}], [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': document}]]
         messages, _ = conversations.prepare(USER, CHAT, 'What was in the file?')
-        self.assertIn('x' * 12000, messages[1]['content'])
+        self.assertIn('x' * 800, messages[1]['content'])
+        self.assertLess(len(messages[1]['content']), 3000)
 
     @patch('api.conversations.database')
     def test_image_survives_reopened_followup(self, database):
         writer = PdfWriter(); writer.add_blank_page(width=100, height=100); output = io.BytesIO(); writer.write(output)
         image = pack('Look', images=[{'type': 'input_file', 'file_data': base64.b64encode(output.getvalue()).decode(), 'filename': 'x.pdf'}])
-        database.side_effect = [[{'id': CHAT}], [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': image}], {'conversation_id': CHAT}]
+        database.side_effect = [[{'id': CHAT}], [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': image}]]
         messages, _ = conversations.prepare(USER, CHAT, 'What color?')
         self.assertEqual(messages[1]['content'][1]['type'], 'input_file')
-        self.assertGreater(database.call_args.args[2]['p_input'], 1800)
+        self.assertNotIn('reserve_chat', str(database.call_args_list))
+
+    def test_long_message_is_not_blocked_by_token_policy(self):
+        self.assertEqual(self.post({'message': 'x' * 10000})[0], 200)
+
+    def test_settings_are_validated_before_auth(self):
+        self.assertEqual(self.post({'message': 'hello', 'settings': {'context': []}})[0], 400)
+        self.auth.assert_not_called()
+
+    def test_creativity_reaches_provider_without_output_cap(self):
+        self.assertEqual(self.post({'message': 'hello', 'settings': {'temperature': 0.2}})[0], 200)
+        params = self.client.return_value.chat.completions.create.call_args.kwargs
+        self.assertEqual(params['temperature'], 0.2)
+        self.assertNotIn('max_tokens', params)
+
+    @patch('api.conversations.database', return_value=[{'id': CHAT}])
+    def test_custom_preprompt_reaches_system_message(self, database):
+        messages, _ = conversations.prepare(USER, None, 'hello', settings={'instructions': 'Use plain Spanish.', 'reply_style': 'thorough'})
+        self.assertIn('Use plain Spanish.', messages[0]['content'])
+        self.assertIn('thorough', messages[0]['content'])
+
+    @patch('api.conversations.database')
+    def test_disabling_file_reuse_omits_old_image_data(self, database):
+        image = pack('Look', images=[{'type': 'input_file', 'file_data': 'data', 'filename': 'x.pdf'}], files=[{'name': 'image.png'}])
+        database.side_effect = [[{'id': CHAT}], [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': image}]]
+        messages, _ = conversations.prepare(USER, CHAT, 'next', settings={'reuse_files': False})
+        self.assertIsInstance(messages[1]['content'], str)
+        self.assertIn('image.png', messages[1]['content'])
 
 
 class PublicWebTests(unittest.TestCase):

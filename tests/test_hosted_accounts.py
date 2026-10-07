@@ -50,13 +50,12 @@ class AccountTests(unittest.TestCase):
         request.hosted_GET('/api/conversations')
         self.assertEqual(request.result[0], 200)
 
-    def test_usage_uses_owner_and_reports_nonnegative_remaining(self):
-        self.database.return_value = [{'input_tokens': 20000, 'output_tokens': 1000}]
+    def test_profile_is_unlimited_without_reading_daily_usage(self):
         request = Request()
         request.hosted_GET('/api/profile')
-        self.assertEqual(request.result[1]['usage']['remaining'], 0)
-        self.assertNotIn('admin', request.result[1])
-        self.assertIn('user_id=eq.' + USER, self.database.call_args.args[0])
+        self.assertTrue(request.result[1]['unlimited'])
+        self.assertNotIn('usage', request.result[1])
+        self.database.assert_not_called()
 
 
 class RemovedAdminRouteTests(unittest.TestCase):

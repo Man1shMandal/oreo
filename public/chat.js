@@ -1,18 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { markdown } from './markdown.js';
+import { preferences, loadPreferences, installSettings } from './preferences.js';
 
 const $ = s => document.querySelector(s);
 const composer = $('#message'), timeline = $('#answer'), stage = $('#chat');
+let defaultModel = '';
 let supabase, user = null, epoch = 0, chatId = null, rows = [], conversations = [];
 const previewUrls = new Set();
-let pending = [], busy = false, loading = false, reading = false, ready = false, remaining = 0, web = false;
+let pending = [], busy = false, loading = false, reading = false, ready = false, web = false;
 const welcome = '<div class="welcome"><h1>What are we working on?</h1><p>Ask a question, share an idea, or start with a file.</p></div>';
 const notify = text => { $('#status').textContent = text; $('#auth-status').textContent = text; };
 const controls = () => {
   const blocked = busy || loading || reading || !ready;
-  $('#send').disabled = blocked || remaining <= 0 || (!composer.value.trim() && !pending.length);
-  composer.disabled = busy || loading || !ready || remaining <= 0;
-  for (const id of ['attach', 'web', 'model', 'new-chat']) $('#' + id).disabled = blocked;
+  $('#send').disabled = blocked || (!composer.value.trim() && !pending.length);
+  composer.disabled = busy || loading || !ready;
+  for (const id of ['attach', 'web', 'model', 'new-chat', 'open-settings']) $('#' + id).disabled = blocked;
   $('#sign-out').disabled = busy;
   for (const button of $('#history').children) button.disabled = busy || loading;
 };
@@ -82,18 +84,13 @@ function renderSidebar() {
 }
 async function account(expected = epoch) {
   const data = await api('/api/profile'); if (expected !== epoch) return;
-  remaining = data.usage.remaining; ready = true;
-  $('#usage').textContent = '';
-  $('#usage').style.setProperty('--allowance', (Math.min(1, Math.max(0, remaining / data.profile.daily_token_limit)) * 360) + 'deg');
-  $('#usage').setAttribute('role', 'img');
-  $('#usage').setAttribute('aria-label', `${remaining.toLocaleString()} estimated tokens remaining today`);
-  $('#usage').title = `${remaining.toLocaleString()} of ${data.profile.daily_token_limit.toLocaleString()} estimated tokens. Resets at midnight UTC.`;
+  ready = true;
   controls();
   const historyData = await api('/api/conversations'); if (expected !== epoch) return;
   conversations = historyData.conversations; renderSidebar();
 }
 function clearFiles() { for (const file of pending) if (file.preview) URL.revokeObjectURL(file.preview); pending = []; tray(); }
-function resetDraft() { for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = false; $('#web').classList.remove('on'); $('#web').setAttribute('aria-pressed', 'false'); }
+function resetDraft() { for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); }
 async function select(row) {
   if (busy || loading || reading) return;
   const expected = ++epoch; loading = true; controls(); document.body.classList.remove('drawer'); notify('Loading chat…');
@@ -159,7 +156,7 @@ async function send() {
   const replyEl = message({ role: 'assistant', content: { text: '' } }); replyEl.classList.add('streaming'); timeline.append(replyEl);
   let reply = '', done = null, receivedChat = chatId;
   try {
-    const response = await request('/api/chat', { method: 'POST', body: JSON.stringify({ message: text, conversation_id: chatId, files: files.map(({ name, type, data }) => ({ name, type, data })), model: $('#model').value, web, stream: true }) });
+    const response = await request('/api/chat', { method: 'POST', body: JSON.stringify({ message: text, conversation_id: chatId, files: files.map(({ name, type, data }) => ({ name, type, data })), model: $('#model').value, web, stream: true, settings: preferences }) });
     if (!response.ok || !response.headers.get('content-type')?.includes('text/event-stream')) {
       const data = await response.json(); throw new Error(data.error || 'Could not start the reply.');
     }
@@ -191,8 +188,8 @@ async function send() {
     chatId = done.conversation_id; rows.push(outgoing, { role: 'assistant', content: { text: reply, sources: done.sources } });
     pending = []; tray(); composer.value = ''; composer.style.height = 'auto';
     // Preview URLs stay alive for this open chat; history uses saved file names.
-    web = false; $('#web').classList.remove('on'); $('#web').setAttribute('aria-pressed', 'false');
-    try { await account(expected); } catch { notify('Reply saved. Could not refresh your usage yet.'); }
+    web = preferences.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web));
+    try { await account(expected); } catch { notify('Reply saved. Could not refresh your chats yet.'); }
     notify((done.warnings || []).join(' '));
   } catch (error) {
     if (expected === epoch) {
@@ -211,7 +208,7 @@ $('#pick').onchange = event => { void addFiles([...event.target.files]); event.t
 $('#web').setAttribute('aria-pressed', 'false');
 $('#web').onclick = () => { web = !web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); };
 composer.oninput = () => { composer.style.height = 'auto'; composer.style.height = Math.min(composer.scrollHeight, 220) + 'px'; controls(); };
-composer.onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void send(); } };
+composer.onkeydown = event => { if (preferences.enter && event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void send(); } };
 composer.onpaste = event => { if (event.clipboardData.files.length) { event.preventDefault(); void addFiles([...event.clipboardData.files]); } };
 document.addEventListener('dragover', event => { if (ready && [...event.dataTransfer.types].includes('Files')) event.preventDefault(); });
 document.addEventListener('drop', event => { if (ready && event.dataTransfer.files.length) { event.preventDefault(); void addFiles([...event.dataTransfer.files]); } });
@@ -233,7 +230,7 @@ async function show(session) {
   document.body.classList.toggle('signed-out', !next); $('#auth').classList.toggle('hidden', !!next); stage.classList.toggle('hidden', !next); $('.compose-wrap').classList.toggle('hidden', !next);
   $('#who').textContent = session?.user.email || '';
   if (next !== user) {
-    ++epoch; user = next; ready = false; loading = false; chatId = null; rows = []; conversations = []; resetDraft(); render(); renderSidebar(); $('#usage').textContent = ''; notify('');
+    ++epoch; user = next; ready = false; loading = false; chatId = null; rows = []; conversations = []; loadPreferences(next, defaultModel); $('#send-hint').textContent = preferences.enter ? 'Enter to send · Shift + Enter for a new line' : 'Click the arrow to send · Enter for a new line'; $('#model').value = preferences.model || defaultModel; $('#settings').close(); resetDraft(); render(); renderSidebar(); notify('');
     if (next) { notify('Loading your chats…'); try { await account(); notify(''); } catch (error) { notify(error.message); } }
   }
   controls();
@@ -243,8 +240,14 @@ try {
   const response = await fetch('/api/config'); if (!response.ok) throw new Error('Could not load Oreo. Please refresh.');
   const config = await response.json(); if (!config.supabaseUrl || !config.supabasePublishableKey) throw new Error('Sign-in is not configured.');
   for (const [label, id] of Object.entries(config.models)) $('#model').add(new Option(label, id));
-  let preferred; try { preferred = localStorage.getItem('oreo-model'); } catch {} $('#model').value = Object.values(config.models).includes(preferred) ? preferred : config.defaultModel;
-  $('#model').onchange = () => { try { localStorage.setItem('oreo-model', $('#model').value); } catch {} };
+  defaultModel = config.defaultModel;
+  $('#model').value = defaultModel;
+  for (const [label, id] of Object.entries(config.models)) $('#s-model').add(new Option(label, id));
+  installSettings((value, saved) => {
+    $('#model').value = value.model; web = value.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web));
+    $('#send-hint').textContent = value.enter ? 'Enter to send · Shift + Enter for a new line' : 'Click the arrow to send · Enter for a new line';
+    notify(saved ? 'Settings saved.' : 'Settings apply to this session. This browser could not save them.');
+  });
   supabase = createClient(config.supabaseUrl, config.supabasePublishableKey);
   const { data, error } = await supabase.auth.getSession(); if (error) throw error;
   await show(data.session); if (!data.session) notify('');
