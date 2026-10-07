@@ -9,8 +9,10 @@ import ipaddress
 import json
 import os
 import re
+import signal
 import socket
 import subprocess
+import sys
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -367,6 +369,7 @@ def main(argv=()):
         if ip:
             print(f"           (or http://{ip}{suffix} on devices that don't know .local names)")
     print("           Ctrl-C to stop")
+    signal.signal(signal.SIGTERM, lambda *a: sys.exit(0))   # so `kill` also runs the cleanup below
     if "--no-open" not in argv:
         webbrowser.open(f"http://localhost{suffix}")
     try:
