@@ -71,5 +71,38 @@ class RemovedAdminRouteTests(unittest.TestCase):
                 request.reply.assert_called_once_with(404, {'error': 'Not found.'})
 
 
+class InstallableAppTests(unittest.TestCase):
+    def get(self, path):
+        from api.index import handler
+        request = object.__new__(handler)
+        request.path = path
+        request.headers = {}
+        request.send_response, request.send_header, request.end_headers = Mock(), Mock(), Mock()
+        request.wfile = io.BytesIO()
+        request.do_GET()
+        request.send_response.assert_called_once_with(200)
+        return dict(call.args for call in request.send_header.call_args_list), request.wfile.getvalue()
+
+    def test_app_files_are_served_with_their_types(self):
+        for path, kind in (('/manifest.webmanifest', 'application/manifest+json'), ('/sw.js', 'text/javascript; charset=utf-8'),
+                           ('/icon-192.png', 'image/png'), ('/icon-512.png', 'image/png'),
+                           ('/icon-maskable-512.png', 'image/png'), ('/apple-touch-icon.png', 'image/png')):
+            with self.subTest(path=path):
+                headers, body = self.get(path)
+                self.assertEqual(headers['Content-Type'], kind)
+                self.assertTrue(body)
+
+    def test_manifest_icons_exist(self):
+        _, body = self.get('/manifest.webmanifest')
+        for icon in json.loads(body)['icons']:
+            with self.subTest(icon=icon['src']):
+                self.get(icon['src'])
+
+    def test_service_worker_never_caches_the_api(self):
+        _, body = self.get('/sw.js')
+        self.assertIn("!url.pathname.startsWith('/api/')", body.decode())
+        self.assertIn("request.method !== 'GET'", body.decode())
+
+
 if __name__ == '__main__':
     unittest.main()

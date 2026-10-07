@@ -228,6 +228,15 @@ $('#google').onclick = async () => {
   const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin } }); if (error) notify(error.message);
 };
 $('#sign-out').onclick = async () => { const { error } = await supabase.auth.signOut(); if (error) notify(error.message); };
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+// Chrome, Edge and Android offer installs through this event; iOS uses Share > Add to Home Screen instead.
+let installPrompt = null;
+addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; $('#install').classList.remove('hidden'); });
+addEventListener('appinstalled', () => { installPrompt = null; $('#install').classList.add('hidden'); });
+$('#install').onclick = async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; $('#install').classList.add('hidden');
+};
 async function show(session) {
   const next = session?.user.id || null;
   document.body.classList.toggle('signed-out', !next); $('#auth').classList.toggle('hidden', !!next); stage.classList.toggle('hidden', !next); $('.compose-wrap').classList.toggle('hidden', !next);
@@ -251,4 +260,7 @@ try {
   supabase.auth.onAuthStateChange((_event, session) => { setTimeout(() => { void show(session); }, 0); });
   const callback = new URLSearchParams(location.hash.slice(1)).get('error_description') || new URLSearchParams(location.search).get('error_description');
   if (callback) { notify(callback); history.replaceState(null, '', location.pathname); }
-} catch (error) { notify(error.message); $('#google').disabled = true; }
+} catch (error) {
+  notify(navigator.onLine ? error.message : 'You are offline. Oreo needs a connection to chat.'); $('#google').disabled = true;
+  if (!navigator.onLine) addEventListener('online', () => location.reload(), { once: true });
+}

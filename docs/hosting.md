@@ -11,6 +11,14 @@ Images are resized in the browser and wrapped as PDF files for ABB's gateway.
 Requests containing images use Claude when a non-Claude model was selected.
 Web results have citations; unavailable search results produce an explicit notice.
 
+Oreo installs as an app on phones, tablets and computers. Chrome, Edge and
+Android show an Install button in the sidebar; on iPhone and iPad use Share, then
+Add to Home Screen. `public/manifest.webmanifest` and the icons describe the app.
+`public/sw.js` caches only the signed-out shell (page, scripts, icons and the
+Supabase module) so the app opens on a weak connection. It never caches `/api/`
+or non-GET requests, so chats and tokens stay out of the cache. Raise `CACHE` in
+`sw.js` if the list of shell files changes.
+
 The browser sends up to five files with a combined size of 2.2 MB after photo
 resizing. The server limits JSON bodies to 3.2 MB and document text to 48,000
 characters. Longer documents need a shorter excerpt. These limits keep requests
