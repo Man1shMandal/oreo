@@ -92,17 +92,28 @@ class handler(BaseHTTPRequestHandler):
                     return
                 raise
             user_id = user['id']
+            wants_stream = payload.get("stream") is True
+            if wants_stream:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Accel-Buffering", "no")
+                self.end_headers()
+                self.streaming = True
+                self.event({"status": "Checking your account…"})
             try:
                 activate_profile(user_id)
             except LookupError as error:
                 self.reply(503, {'error': str(error)})
                 return
+            self.event({"status": "Preparing your chat…"})
             lock = acquire(user_id)
             if lock.get('error'):
                 self.reply(409 if lock['error'] == 'busy' else 503, {'error': 'A reply is already in progress. Please wait.' if lock['error'] == 'busy' else 'Oreo is unavailable right now. Try again shortly.'})
                 return
             lease = lock['lease']
             sources = []
+            self.event({"status": "Reading attachments…" if uploads else "Loading conversation…"})
             try:
                 with tempfile.TemporaryDirectory(prefix="oreo-uploads-") as temp_dir:
                     blocks, image_names, errors = attach.process(uploads, Path(temp_dir))
@@ -119,15 +130,7 @@ class handler(BaseHTTPRequestHandler):
                 self.reply(400, {"error": str(error)})
                 return
             chat_id = reservation['conversation_id']
-            wants_stream = payload.get("stream") is True
-            if wants_stream:
-                self.send_response(200)
-                self.send_header("Content-Type", "text/event-stream")
-                self.send_header("Cache-Control", "no-store")
-                self.send_header("X-Accel-Buffering", "no")
-                self.end_headers()
-                self.streaming = True
-                self.event({"conversation_id": chat_id, "status": "Searching the web…" if payload.get("web") else "Thinking…"})
+            self.event({"conversation_id": chat_id, "status": "Searching the web…" if payload.get("web") else "Connecting to the model…"})
             warnings = []
             if payload.get("web"):
                 sources = self.search_web(messages)
@@ -147,6 +150,7 @@ class handler(BaseHTTPRequestHandler):
                 model = config.VISION_MODEL
             client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url="https://api.abby.abb.com/api/v1/developers", timeout=120, max_retries=0)
             if wants_stream:
+                self.event({"status": "Waiting for the model…"})
                 chunks = client.chat.completions.create(model=model, messages=messages,
                     temperature=preferences["temperature"], stream=True)
                 pieces = []
