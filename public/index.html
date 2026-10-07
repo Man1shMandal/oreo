@@ -25,10 +25,8 @@
       <h1>oreo</h1>
       <p>A small personal AI by Manish.</p>
       <section id="auth">
-        <p>Sign in or create your account. New accounts need approval before they can use OREO.</p>
-        <input id="email" type="email" autocomplete="email" placeholder="email">
-        <input id="password" type="password" autocomplete="current-password" placeholder="password" style="margin-top:8px">
-        <button id="sign-in">sign in</button><button id="sign-up" class="secondary">create account</button>
+        <p>Sign in with Google. New accounts need approval before they can use OREO.</p>
+        <button id="google">continue with Google</button>
       </section>
       <p id="status"></p>
       <section id="chat" class="hidden">
@@ -52,17 +50,11 @@
       };
       const session = (await supabase.auth.getSession()).data.session; show(session);
       supabase.auth.onAuthStateChange((_event, next) => show(next));
-      const credentials = () => ({ email: document.querySelector('#email').value.trim(), password: document.querySelector('#password').value });
-      const validCredentials = () => {
-        const value = credentials();
-        if (!value.email || value.password.length < 6) {
-          status.textContent = 'Enter an email and a password with at least 6 characters.';
-          return null;
-        }
-        return value;
+      document.querySelector('#google').onclick = async () => {
+        status.textContent = 'Opening Google…';
+        const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+        if (error) status.textContent = error.message;
       };
-      document.querySelector('#sign-in').onclick = async () => { const value = validCredentials(); if (!value) return; const { error } = await supabase.auth.signInWithPassword(value); status.textContent = error?.message || ''; };
-      document.querySelector('#sign-up').onclick = async () => { const value = validCredentials(); if (!value) return; const { error } = await supabase.auth.signUp(value); status.textContent = error?.message || 'Check your email to confirm your account.'; };
       document.querySelector('#sign-out').onclick = () => supabase.auth.signOut();
       document.querySelector('#send').onclick = async () => {
         const message = document.querySelector('#message').value.trim(); if (!message) return;
