@@ -22,11 +22,11 @@ class handler(ChatHandler, HostedHandler):
             body = (Path(__file__).resolve().parent.parent / "oreo" / "logo.svg").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "image/svg+xml")
-            self.send_header("Cache-Control", "public, max-age=3600")
+            self.send_header("Cache-Control", "no-cache")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
-        elif path in ("/chat.js", "/markdown.js"):
+        elif path in ("/chat.js", "/markdown.js", "/preferences.js"):
             body = (Path(__file__).resolve().parent.parent / "public" / path[1:]).read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/javascript; charset=utf-8")

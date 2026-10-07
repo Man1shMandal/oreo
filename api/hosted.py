@@ -4,7 +4,6 @@ import json
 import os
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit
 
 from api.conversations import conversation_id, database, activate_profile
@@ -42,10 +41,7 @@ class HostedHandler:
         try:
             user, profile = identity(self.headers)
             if route == '/api/profile':
-                today = datetime.now(timezone.utc).date().isoformat()
-                rows = database(f"daily_usage?user_id=eq.{user['id']}&usage_date=eq.{today}&select=input_tokens,output_tokens")
-                used = sum(rows[0].values()) if rows else 0
-                self.reply(200, {'profile': profile, 'usage': {'date': today, 'used': used, 'remaining': max(0, profile['daily_token_limit'] - used)}})
+                self.reply(200, {'profile': profile, 'unlimited': True})
             else:
                 query = parse_qs(urlsplit(self.path).query)
                 if 'id' not in query:

@@ -78,11 +78,6 @@ class HostedChatTests(unittest.TestCase):
         self.assertEqual(self.post({'message': 'hello', 'conversation_id': CHAT})[0], 404)
         self.client.assert_not_called()
 
-    def test_limit_does_not_call_model(self):
-        self.prepare.return_value = ([], {'error': 'limit'})
-        self.assertEqual(self.post({'message': 'hello'})[0], 429)
-        self.client.assert_not_called()
-
     def test_empty_reply_is_not_saved(self):
         self.client.return_value.chat.completions.create.return_value.choices[0].message.content = ''
         self.assertEqual(self.post({'message': 'hello'})[0], 502)
@@ -124,7 +119,7 @@ class HostedChatTests(unittest.TestCase):
         self.prepare.assert_not_called()
 
     def test_invalid_messages_do_not_touch_auth(self):
-        for message in ['', '   ', 'x' * 6001, None, [], 1]:
+        for message in ['', '   ', None, [], 1]:
             with self.subTest(message_type=type(message).__name__):
                 self.assertEqual(self.post({'message': message})[0], 400)
         self.auth.assert_not_called()
@@ -139,21 +134,21 @@ class HostedChatTests(unittest.TestCase):
         self.post({'message': 'hello'})
         kwargs = self.client.return_value.chat.completions.create.call_args.kwargs
         self.assertEqual(kwargs['messages'], self.prepare.return_value[0])
-        self.assertEqual(kwargs['max_tokens'], conversations.MAX_OUTPUT)
+        self.assertNotIn('max_tokens', kwargs)
 
 
 class ContextTests(unittest.TestCase):
     @patch('api.conversations.database')
-    def test_history_is_ordered_and_budgeted(self, database):
+    def test_history_is_ordered_and_owned(self, database):
         database.side_effect = [[{'id': CHAT}], [
             {'role': 'assistant', 'content': 'previous answer'},
             {'role': 'user', 'content': 'previous question'},
-        ], {'conversation_id': CHAT}]
-        messages, _ = conversations.prepare(USER, CHAT, 'next question')
+        ]]
+        messages, result = conversations.prepare(USER, CHAT, 'next question')
         self.assertEqual([m['role'] for m in messages], ['system', 'user', 'assistant', 'user'])
         self.assertEqual(messages[1]['content'], 'previous question')
-        self.assertEqual(database.call_args.args[0], 'rpc/reserve_chat')
-        self.assertEqual(database.call_args.args[2]['p_output'], conversations.MAX_OUTPUT)
+        self.assertTrue(result['unlimited'])
+        self.assertFalse(any('reserve_chat' in str(call) or 'daily_usage' in str(call) for call in database.call_args_list))
 
     @patch('api.conversations.database', return_value=[])
     def test_unowned_history_is_never_read(self, database):
@@ -161,25 +156,21 @@ class ContextTests(unittest.TestCase):
             conversations.prepare(USER, CHAT, 'hello')
         self.assertEqual(database.call_count, 1)
 
-    @patch('api.conversations.database')
-    def test_new_chat_budget_includes_message_and_system(self, database):
-        database.return_value = {'conversation_id': CHAT}
-        messages, _ = conversations.prepare(USER, None, 'hello')
+    @patch('api.conversations.database', return_value=[{'id': CHAT}])
+    def test_new_chat_has_no_daily_quota(self, database):
+        messages, result = conversations.prepare(USER, None, 'hello')
         self.assertEqual(len(messages), 2)
-        args = database.call_args.args
-        self.assertEqual(args[0], 'rpc/reserve_chat')
-        self.assertEqual(args[2]['p_user'], USER)
-        self.assertIsNone(args[2]['p_conversation'])
-        self.assertGreater(args[2]['p_input'], len('hello') // 4)
+        database.assert_called_once_with('conversations', 'POST', {'user_id': USER, 'title': 'hello'})
+        self.assertEqual(result, {'conversation_id': CHAT, 'unlimited': True})
 
     @patch('api.conversations.database')
-    def test_context_drops_incomplete_and_oversize_older_turns(self, database):
+    def test_context_drops_incomplete_oversize_older_turns(self, database):
         database.side_effect = [[{'id': CHAT}], [
             {'role': 'assistant', 'content': 'latest reply'},
             {'role': 'user', 'content': 'latest question'},
             {'role': 'assistant', 'content': 'orphan reply'},
             {'role': 'user', 'content': 'x' * 6001},
-        ], {'conversation_id': CHAT}]
+        ]]
         messages, _ = conversations.prepare(USER, CHAT, 'next')
         self.assertEqual([m['content'] for m in messages[1:]], ['latest question', 'latest reply', 'next'])
 
@@ -203,7 +194,7 @@ class ProfileCompatibilityTests(unittest.TestCase):
     def test_existing_account_does_not_need_another_write(self, database):
         database.return_value = [{'id': USER, 'approved': True, 'daily_token_limit': 20000}]
         profile = conversations.activate_profile(USER)
-        self.assertEqual(profile['daily_token_limit'], 20000)
+        self.assertNotIn('daily_token_limit', profile)
         self.assertNotIn('approved', profile)
         self.assertEqual(database.call_count, 1)
 
