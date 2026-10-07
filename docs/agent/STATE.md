@@ -72,3 +72,10 @@ all accounts to keep ordinary replies fast; the Web control stays available. Hos
 second model call to plan queries. The composer clears at send and restores its
 text if the request fails. Removed the Oreo mark and favicon from the hosted
 interface. Automated tests not run.
+
+
+## 2026-10-07 — Keep the active reply in view
+Sending a message now scrolls the chat to the new assistant placeholder before
+waiting for the server. Streamed text then follows the reply while the reader is
+near the bottom. This prevents the welcome screen from staying in view while a
+reply is appended below it. No automated tests run.
