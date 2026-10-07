@@ -60,3 +60,8 @@ history or calls the planner. Reserve 4,000 extra estimated tokens for bounded
 research and a 2,048-token answer cap. Disable automatic SDK retries to avoid
 unreserved repeated provider requests. Search failures must be visible to users.
 Validate public URLs again on redirects as well as on the first fetch.
+
+## 2026-10-07 — Keep usage quiet and branding consistent
+Show the account allowance as a small ring, with exact numbers and reset time in
+its tooltip and accessible label. Use one canonical `oreo/logo.svg` asset across
+the hosted sign-in, sidebar, mobile header, browser favicon, and local browser UI.

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>oreo</title>
+<link rel="icon" type="image/svg+xml" href="/oreo.svg">
 <style>
   :root {
     --bg: #f6f1e7; --panel: #efe8da; --ink: #1d1a17; --muted: #7a7166;
@@ -153,11 +154,12 @@
   #status { font-size: 13px; color: var(--muted); margin-top: 12px; min-height: 1.2em; }
 
   @media (max-width: 720px) { aside { display: none; } }
+  .brand{letter-spacing:-.035em;font-weight:650}.brand img{display:block}
 </style>
 </head>
 <body>
 <aside>
-  <div class="brand"><i></i>oreo</div>
+  <div class="brand"><img src="/oreo.svg" alt="" width="24" height="24">oreo</div>
   <button id="new">+ New chat</button>
   <nav id="chats"></nav>
   <div class="side-foot"><button id="who" title="Not you? Change name"></button><span id="owner-only" hidden> · <button id="open-settings">Settings</button></span></div>

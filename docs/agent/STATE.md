@@ -71,3 +71,11 @@ from real accounts, conversations and model credentials. Production provider and
 Google sign-in checks are still pending. Existing unrelated agent instructions
 and symlink remain unstaged. Vercel project identity has been verified as `oreo`.
 Next step: publish and verify the rebuilt app on the existing domain.
+
+The rebuild was committed as `c59f326`, pushed to main, deployed, and verified on
+the custom domain. All eight public deployment smoke checks passed. The existing
+signed-in browser session loaded its profile and saved conversation list correctly.
+User follow-ups request a usage ring instead of visible token numbers and a shared
+logo throughout the app. Those refinements are implemented locally; the same SVG
+asset also serves the local browser UI. Syntax, compilation and whitespace checks
+pass. Next step: publish these refinements and record the final verification.
