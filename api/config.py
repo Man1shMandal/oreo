@@ -4,6 +4,8 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler
 
+from oreo.config import DEFAULT_MODEL, MODELS
+
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -11,6 +13,8 @@ class handler(BaseHTTPRequestHandler):
             {
                 "supabaseUrl": os.environ.get("SUPABASE_URL", ""),
                 "supabasePublishableKey": os.environ.get("SUPABASE_PUBLISHABLE_KEY", ""),
+                "models": MODELS,
+                "defaultModel": MODELS[DEFAULT_MODEL],
             }
         ).encode()
         self.send_response(200)

@@ -5,9 +5,11 @@ import os
 import urllib.request
 from uuid import UUID
 
+from api.messages import prompt_content, estimate, unpack
+
 
 SYSTEM_PROMPT = "You are Oreo, a personal AI assistant. Be brief, direct, and useful. No emoji. Do not add creator attribution to replies."
-MAX_OUTPUT = 700
+MAX_OUTPUT = 2048
 
 
 def conversation_id(value):
@@ -29,7 +31,7 @@ def database(path, method="GET", payload=None):
         return json.loads(body) if body else None
 
 
-def prepare(user_id, chat_id, message):
+def prepare(user_id, chat_id, message, image_count=0, extra_tokens=0, title=None):
     history = []
     if chat_id:
         owned = database(f"conversations?id=eq.{chat_id}&user_id=eq.{user_id}&select=id")
@@ -39,20 +41,24 @@ def prepare(user_id, chat_id, message):
         # Keep recent complete turns within the same small context budget as local Oreo.
         size = 0
         for row in rows:
-            if size + len(row["content"]) > 6000:
+            content = prompt_content(row["content"])
+            cost = len(content) if isinstance(content, str) else sum(len(p.get("text", "")) for p in content)
+            has_attachment = bool(unpack(row["content"]).get("documents") or unpack(row["content"]).get("images"))
+            budget = 54000 if has_attachment and size < 6000 else 6000
+            if size + cost > budget:
                 break
-            history.append({"role": row["role"], "content": row["content"]})
-            size += len(row["content"])
+            history.append({"role": row["role"], "content": content})
+            size += cost
         history.reverse()
         while history and history[0]["role"] != "user":
             history.pop(0)
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history, {"role": "user", "content": message}]
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}, *history, {"role": "user", "content": prompt_content(message)}]
     # The gateway omits actual usage. Budget estimates include the entire prompt
     # and reserve the full output cap before a provider call, including failures.
-    estimated_input = sum((len(row["content"]) + 3) // 4 + 8 for row in messages)
+    estimated_input = sum(estimate(row["content"]) for row in messages) + image_count * 1800 + extra_tokens
     reservation = database("rpc/reserve_chat", "POST", {
         "p_user": user_id, "p_conversation": chat_id,
-        "p_title": message[:80], "p_input": estimated_input, "p_output": MAX_OUTPUT,
+        "p_title": (title or unpack(message)["text"] or "Attached file")[:80], "p_input": estimated_input, "p_output": MAX_OUTPUT,
     })
     return messages, reservation
 
