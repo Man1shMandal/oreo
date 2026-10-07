@@ -83,7 +83,10 @@ function renderSidebar() {
 async function account(expected = epoch) {
   const data = await api('/api/profile'); if (expected !== epoch) return;
   remaining = data.usage.remaining; ready = true;
-  $('#usage').textContent = `${remaining.toLocaleString()} left today`;
+  $('#usage').textContent = '';
+  $('#usage').style.setProperty('--allowance', (Math.min(1, Math.max(0, remaining / data.profile.daily_token_limit)) * 360) + 'deg');
+  $('#usage').setAttribute('role', 'img');
+  $('#usage').setAttribute('aria-label', `${remaining.toLocaleString()} estimated tokens remaining today`);
   $('#usage').title = `${remaining.toLocaleString()} of ${data.profile.daily_token_limit.toLocaleString()} estimated tokens. Resets at midnight UTC.`;
   controls();
   const historyData = await api('/api/conversations'); if (expected !== epoch) return;

@@ -130,6 +130,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if method == "GET" and path == "/":
                 return self.send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
+            if method == "GET" and path == "/oreo.svg":
+                return self.send(200, PAGE.with_name("logo.svg").read_bytes(), "image/svg+xml")
             if parts[0] != "api" or len(parts) < 2:
                 return self.send(404, {"error": "not found"})
             fn = getattr(self, f"{method.lower()}_{parts[1]}", None)

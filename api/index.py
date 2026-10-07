@@ -18,6 +18,14 @@ class handler(ChatHandler, HostedHandler):
             ConfigHandler.do_GET(self)
         elif path in ("/api/profile", "/api/conversations"):
             self.hosted_GET(path)
+        elif path == "/oreo.svg":
+            body = (Path(__file__).resolve().parent.parent / "oreo" / "logo.svg").read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "image/svg+xml")
+            self.send_header("Cache-Control", "public, max-age=3600")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
         elif path in ("/chat.js", "/markdown.js"):
             body = (Path(__file__).resolve().parent.parent / "public" / path[1:]).read_bytes()
             self.send_response(200)
