@@ -1,5 +1,21 @@
 # Oreo current state
 
+## Production promotion — 2026-10-07
+
+User applied migration 003 and reported the exact success result from
+`supabase/tests/hosted_v1.sql`. User also saved the domain redirect allowlist and
+Name.com CNAME. DNS independently resolves to the required Vercel target.
+Promoted prepared production deployment `dpl_CJgMFUH6pWxSrUEKtgP7T8xBbcgL`.
+`https://oreo.manish.engineer` resolves to that READY release and serves valid HTTPS.
+Live health/config return 200; profile/conversations/admin return unauthenticated
+401 with no-store and nosniff headers. Homepage contains the saved-history UI and
+no creator attribution. Source remains the previously tested `d7ed931` product code.
+Main was confirmed an ancestor of this release before its fast-forward push.
+Authenticated Google login, real reply, history reload and admin controls on the
+custom domain still require a signed-in browser check. Browser automation remains
+unreliable. Supabase Site URL may still be the original URL; custom-domain redirect
+was explicitly added by the user. Next: verify the signed-in flow on the domain.
+
 ## Release access retry — 2026-10-07
 
 Backend and verification agents rechecked the unchanged release: staged health
