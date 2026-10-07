@@ -1,5 +1,20 @@
 # Oreo current state
 
+## Sign-in-only chat release — 2026-10-07
+
+Product commit `d32d405`: removed manual approval screens, pending states, admin
+API routes and administrator identity checks. Every authenticated account is
+automatically enabled, including accounts with the old false flag. Legacy SQL
+quota/lease compatibility is handled server-side; no new migration is needed.
+Daily budgets, request serialization, saved history and owner isolation remain.
+27 mocked tests pass, including formerly pending users completing a chat and
+removed admin routes returning 404. Python compile, frontend syntax/mock flow
+and diff checks pass. Production deployment `dpl_ApcSU59guKKtdCy222SL7uT2R9iL`
+serves https://oreo.manish.engineer. Live health passes, homepage has no approval
+or admin copy, and /api/admin returns 404. Browser sign-in/provider chat on this
+release remains unverified directly because computer control is unreliable.
+Next: user can refresh the live site and sign in to chat immediately.
+
 ## Production promotion — 2026-10-07
 
 User applied migration 003 and reported the exact success result from
