@@ -109,10 +109,11 @@ class InstallableAppTests(unittest.TestCase):
         script = (root / 'public' / 'chat.js').read_text()
         styles = (root / 'public' / 'theme.css').read_text()
         self.assertRegex(page, r'<span id="oreo-eye" class="oreo-eye" aria-hidden="true">')
+        self.assertEqual(page.count('class="oreo-eye-dot"'), 2)
         self.assertIn("eye.classList.toggle('working', active)", script)
         self.assertIn("eye.classList.toggle('attentive', !active && ready && Boolean(composer.value.trim()))", script)
         self.assertIn('@media (prefers-reduced-motion: reduce)', styles)
-        self.assertIn('@keyframes oreo-blink', styles)
+        self.assertIn('@keyframes oreo-dot-blink', styles)
 
     def test_manifest_icons_exist(self):
         _, body = self.get('/manifest.webmanifest')
