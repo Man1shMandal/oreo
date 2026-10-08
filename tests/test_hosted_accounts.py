@@ -102,20 +102,22 @@ class InstallableAppTests(unittest.TestCase):
             with self.subTest(control=control):
                 self.assertIn(f'id="{control}"', page)
 
-    def test_header_eye_is_decorative_and_tracks_chat_activity(self):
+    def test_header_character_is_decorative_and_tracks_chat_activity(self):
         from pathlib import Path
         root = Path(__file__).resolve().parent.parent
         page = (root / 'public' / 'index.html').read_text()
         script = (root / 'public' / 'chat.js').read_text()
         styles = (root / 'public' / 'theme.css').read_text()
-        self.assertIn('class="oreo-eye desktop-eye" aria-hidden="true"', page)
-        self.assertIn('class="oreo-eye mobile-eye" aria-hidden="true"', page)
+        self.assertIn('class="oreo-character desktop-character" aria-hidden="true"', page)
+        self.assertIn('class="oreo-character mobile-character" aria-hidden="true"', page)
         self.assertEqual(page.count('class="oreo-eye-dot"'), 4)
-        self.assertIn("document.querySelectorAll('.oreo-eye')", script)
+        self.assertEqual(page.count('class="oreo-smile"'), 2)
+        self.assertIn("document.querySelectorAll('.oreo-character')", script)
         self.assertIn("eye.classList.toggle('working', active)", script)
         self.assertIn("eye.classList.toggle('attentive', !active && ready && Boolean(composer.value.trim()))", script)
         self.assertIn('@media (prefers-reduced-motion: reduce)', styles)
         self.assertIn('@keyframes oreo-dot-blink', styles)
+        self.assertIn('@keyframes oreo-idle', styles)
 
     def test_manifest_icons_exist(self):
         _, body = self.get('/manifest.webmanifest')

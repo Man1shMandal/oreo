@@ -13,7 +13,7 @@ const notify = text => { $('#status').textContent = text; $('#auth-status').text
 const controls = () => {
   const blocked = busy || loading || reading || !ready;
   const active = busy || loading || reading;
-  for (const eye of document.querySelectorAll('.oreo-eye')) {
+  for (const eye of document.querySelectorAll('.oreo-character')) {
     eye.classList.toggle('working', active);
     eye.classList.toggle('attentive', !active && ready && Boolean(composer.value.trim()));
   }

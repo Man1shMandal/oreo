@@ -1,7 +1,7 @@
 // Keeps the app shell available so the installed app opens on a weak connection.
 // Only public, signed-out files are cached. /api/ and every non-GET request go
 // straight to the network, so chats and tokens never land in the cache.
-const CACHE = 'oreo-shell-v8';
+const CACHE = 'oreo-shell-v9';
 const SHELL = ['/', '/chat.js', '/markdown.js', '/preferences.js', '/theme.css', '/oreo.svg', '/manifest.webmanifest', '/icon-192.png'];
 
 self.addEventListener('install', event => {
