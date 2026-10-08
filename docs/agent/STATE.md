@@ -260,3 +260,13 @@ settings disable both. Validation: all 68 Python tests, 3 Node chat UI tests,
 JavaScript syntax and `git diff --check` pass. Released in commit `2cb3935` to
 `origin/main`; GitHub verification run `37801687965` passed. Production HTML and
 CSS confirm the responsive placement, and `/api/health` returns ok.
+
+## 2026-10-08 — Smiling idle character
+Added a small curved smile beneath the two dots. The character now floats by
+less than one pixel on a slow 3.6 second idle loop and blinks every 8.2 seconds;
+while the user types or Oreo works, the idle loop speeds up slightly. Reduced
+motion disables both. Bumped the offline shell to v9. Validation: all 68 Python
+tests, 3 Node chat UI tests, JavaScript syntax, and `git diff --check` pass.
+Released in commit `854e876` to `origin/main`; GitHub verification run
+`37802179016` passed. Production serves the smile and idle styles, and
+`/api/health` returns ok.
