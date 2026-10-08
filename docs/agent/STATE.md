@@ -193,3 +193,31 @@ compileall and `git diff --check` pass. Released as commit `6bfe682` to
 `dpl_Hi4jNwxTE1EX3EimRe65NvqEsjVm` is READY with `oreo.manish.engineer`
 attached. The production page confirms the pure-black canvas, Oreo wordmark,
 loaded stylesheet, and Settings control with no biscuit mark in the interface.
+
+## 2026-10-08 — Settings icon
+Replaced the lopsided custom Settings gear in `public/index.html` with a
+standard, balanced outline gear while retaining the existing button, accessible
+label, and interaction. Inspected on `worktree-web-ui` at `8f398db`.
+
+## 2026-10-08 — Composer focus and motion polish
+Removed the blue textarea focus ring that overrode the composer styling, and
+kept keyboard focus visible with a neutral outline on controls and a soft border
+on the composer. Switched the leftover blue accent to monochrome, added short
+press/hover transitions, subtle message/settings/drawer entrance motion, and a
+streaming-caret pulse. Reduced-motion preferences disable the added motion.
+Validation: 63 Python tests, 3 chat UI behavior tests, HTML parsing and
+`git diff --check` pass.
+
+## 2026-10-08 — Hosted chat request latency
+Removed the routine profile read from each chat request; the lease RPC checks
+account eligibility, and the compatibility activation path runs only when that
+check reports a legacy pending profile. Conversation ownership and the latest
+100 messages now load in one owner-filtered PostgREST embedding instead of two
+serial requests. Authenticated user lookups are reused for up to 20 seconds on
+a warm instance, keyed by a token hash and never beyond the JWT expiry. Text-only
+requests skip Pillow imports used only for image previews. New conversations are
+inserted after the model stream, so that write no longer delays the first token.
+
+Validation: 67 Python tests, 3 JavaScript behavior tests, HTML parsing and
+`git diff --check` pass. No real-provider latency benchmark was run; model and
+network latency outside Oreo remain unmeasured.

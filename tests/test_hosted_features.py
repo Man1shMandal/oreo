@@ -102,7 +102,7 @@ class FeatureTests(unittest.TestCase):
     @patch('api.conversations.database')
     def test_document_survives_reopened_followup(self, database):
         document = pack('Read this', documents=['<file path="notes.txt">\n' + 'x' * 12000 + '\n</file>'], files=[{'name': 'notes.txt'}])
-        database.side_effect = [[{'id': CHAT}], [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': document}]]
+        database.return_value = [{'id': CHAT, 'messages': [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': document}]}]
         messages, _ = conversations.prepare(USER, CHAT, 'What was in the file?')
         self.assertIn('x' * 800, messages[1]['content'])
         self.assertLess(len(messages[1]['content']), 3000)
@@ -111,7 +111,7 @@ class FeatureTests(unittest.TestCase):
     def test_image_survives_reopened_followup(self, database):
         writer = PdfWriter(); writer.add_blank_page(width=100, height=100); output = io.BytesIO(); writer.write(output)
         image = pack('Look', images=[{'type': 'input_file', 'file_data': base64.b64encode(output.getvalue()).decode(), 'filename': 'x.pdf'}])
-        database.side_effect = [[{'id': CHAT}], [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': image}]]
+        database.return_value = [{'id': CHAT, 'messages': [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': image}]}]
         messages, _ = conversations.prepare(USER, CHAT, 'What color?')
         self.assertEqual(messages[1]['content'][1]['type'], 'input_file')
         self.assertNotIn('reserve_chat', str(database.call_args_list))
@@ -138,7 +138,7 @@ class FeatureTests(unittest.TestCase):
     @patch('api.conversations.database')
     def test_disabling_file_reuse_omits_old_image_data(self, database):
         image = pack('Look', images=[{'type': 'input_file', 'file_data': 'data', 'filename': 'x.pdf'}], files=[{'name': 'image.png'}])
-        database.side_effect = [[{'id': CHAT}], [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': image}]]
+        database.return_value = [{'id': CHAT, 'messages': [{'role': 'assistant', 'content': 'OK'}, {'role': 'user', 'content': image}]}]
         messages, _ = conversations.prepare(USER, CHAT, 'next', settings={'reuse_files': False})
         self.assertIsInstance(messages[1]['content'], str)
         self.assertIn('image.png', messages[1]['content'])

@@ -6,7 +6,7 @@
   --line: #28282b;
   --ink: #f5f5f7;
   --muted: #98989e;
-  --accent: #0a84ff;
+  --accent: #e5e5e8;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -57,7 +57,8 @@ main { background: #000; }
 .turn { margin-bottom: 25px; }
 .user { padding: 11px 15px; border-radius: 17px 17px 5px 17px; background: #1c1c1e; color: #ededf0; }
 .assistant { color: #e4e4e7; line-height: 1.72; }
-.assistant a { color: #2997ff; }
+.assistant a { color: #dedee2; text-decoration-color: #66666c; text-underline-offset: 3px; }
+.assistant a:hover { color: #fff; text-decoration-color: #bbb; }
 .assistant pre { border-color: #303034; background: #111113; color: #eeeeef; }
 .assistant :not(pre) > code { background: #242427; color: #d8d8dc; }
 .copy { border-color: #36363a; background: #1c1c1e; color: #c5c5ca; }
@@ -86,9 +87,8 @@ main { background: #000; }
 .signin .primary:hover { background: #fff; }
 .signin small { color: #7f7f85; }
 #auth-status { color: #a1a1a7; }
-button:focus-visible, select:focus-visible, a:focus-visible, textarea:focus-visible {
-  outline: 2px solid rgb(10 132 255 / 70%); outline-offset: 2px;
-}
+button:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid rgb(245 245 247 / 72%); outline-offset: 2px; }
+textarea:focus-visible { outline: 0; }
 #settings { width: min(660px, calc(100% - 32px)); max-height: min(88dvh, 820px); overflow: hidden; padding: 0; border: 1px solid #29292d; border-radius: 20px; background: #0c0c0e; color: #f1f1f3; box-shadow: 0 24px 80px rgb(0 0 0 / 65%); }
 #settings::backdrop { background: rgb(0 0 0 / 72%); backdrop-filter: blur(5px); }
 #settings-form { display: flex; flex-direction: column; max-height: min(88dvh, 820px); }
@@ -174,5 +174,23 @@ button:focus-visible, select:focus-visible, a:focus-visible, textarea:focus-visi
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+button, a, select, .box, .history-row { transition: color .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .18s ease, transform .16s ease; }
+button:not(:disabled):not(.mobile-backdrop):active { transform: scale(.97); }
+.box:focus-within { border-color: #68686d; box-shadow: 0 0 0 2px rgb(245 245 247 / 5%); }
+.box textarea { outline: 0; box-shadow: none; appearance: none; -webkit-appearance: none; caret-color: #f5f5f7; }
+#settings .field select:focus, #settings .field textarea:focus { border-color: #68686d; box-shadow: 0 0 0 2px rgb(245 245 247 / 5%); }
+.turn { animation: settle-in .2s cubic-bezier(.2,.75,.3,1) both; }
+.assistant.streaming::after { animation: caret-pulse .9s steps(2, end) infinite; }
+#settings[open] { animation: panel-enter .18s cubic-bezier(.2,.75,.3,1) both; }
+@keyframes settle-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes caret-pulse { 50% { opacity: 0; } }
+@keyframes panel-enter { from { opacity: 0; transform: translateY(6px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 760px) {
+  body.drawer aside { animation: drawer-enter .18s cubic-bezier(.2,.75,.3,1) both; }
+  body.drawer .mobile-backdrop { animation: backdrop-enter .16s ease-out both; }
+}
+@keyframes drawer-enter { from { opacity: .85; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes backdrop-enter { from { opacity: 0; } to { opacity: 1; } }

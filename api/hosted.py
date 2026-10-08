@@ -5,7 +5,7 @@ import urllib.error
 from urllib.parse import parse_qs, urlsplit
 
 from api.conversations import conversation_id, database, activate_profile
-from api.network import request_json
+from api.network import cached_user, request_json
 
 
 class AccessError(Exception):
@@ -18,9 +18,11 @@ def identity(headers):
     if not token:
         raise AccessError(401, 'Please sign in.')
     try:
-        user = request_json(
+        user = cached_user(
+            token,
             os.environ['SUPABASE_URL'].rstrip('/') + '/auth/v1/user',
             {'apikey': os.environ['SUPABASE_PUBLISHABLE_KEY'], 'Authorization': 'Bearer ' + token},
+            request_json,
         )
     except urllib.error.HTTPError as error:
         if error.code in (401, 403):
