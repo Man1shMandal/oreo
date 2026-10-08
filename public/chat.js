@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { markdown } from './markdown.js';
 import { preferences, loadPreferences, installSettings } from './preferences.js';
+import { voiceSupported, listen, command, speak, stopSpeaking, speaking } from './voice.js';
 
 const $ = s => document.querySelector(s);
 const composer = $('#message'), timeline = $('#answer'), stage = $('#chat');
@@ -19,7 +20,7 @@ const controls = () => {
   }
   $('#send').disabled = blocked || (!composer.value.trim() && !pending.length);
   composer.disabled = busy || loading || !ready;
-  for (const id of ['attach', 'web', 'model', 'new-chat', 'open-settings']) $('#' + id).disabled = blocked;
+  for (const id of ['attach', 'web', 'model', 'new-chat', 'open-settings', 'mic']) $('#' + id).disabled = blocked;
   $('#sign-out').disabled = busy;
   for (const button of $('#history').querySelectorAll('button')) button.disabled = busy || loading;
 };
@@ -228,6 +229,7 @@ async function send() {
     conversations = [{ ...saved, updated_at: new Date().toISOString() }, ...conversations.filter(row => row.id !== chatId)].slice(0, 100);
     renderSidebar();
     notify((done.warnings || []).join(' '));
+    return reply;
   } catch (error) {
     if (expected === epoch) {
       userEl.remove(); replyEl.remove(); if (!rows.length) render();
@@ -245,6 +247,41 @@ $('#attach').onclick = () => $('#pick').click();
 $('#pick').onchange = event => { void addFiles([...event.target.files]); event.target.value = ''; };
 $('#web').setAttribute('aria-pressed', 'false');
 $('#web').onclick = () => { web = !web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); };
+// Voice: the mic sends what you say, runs a few spoken commands, and reads the answer aloud.
+let stopListening = null;
+const micState = state => {
+  $('#mic').dataset.state = state; $('#mic').classList.toggle('on', state !== 'idle'); $('#mic').setAttribute('aria-pressed', String(state !== 'idle'));
+  $('#mic').title = { idle: 'Talk to Oreo', listening: 'Listening. Tap to cancel.', speaking: 'Speaking. Tap to stop.' }[state]; $('#mic').setAttribute('aria-label', $('#mic').title);
+};
+const answerAloud = text => { micState('speaking'); speak(text, () => micState('idle')); };
+const announce = text => { notify(text); answerAloud(text); };
+function runCommand(action) {
+  if (action === 'new-chat') { newChat(); announce('Started a new chat.'); }
+  else if (action === 'web-on' || action === 'web-off') { web = action === 'web-on'; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); announce(web ? 'Web search is on.' : 'Web search is off.'); }
+  else if (action === 'settings') { notify(''); $('#open-settings').click(); }
+  else if (action === 'repeat') { const last = [...timeline.querySelectorAll('.assistant .md')].pop(); if (last) answerAloud(last.textContent); else announce('There is no answer to read yet.'); }
+  else { stopSpeaking(); micState('idle'); notify(''); }
+}
+async function voiceTurn(text, before) {
+  const action = command(text);
+  if (action) { composer.value = before; composer.oninput(); runCommand(action); return; }
+  if ($('#send').disabled) return;
+  const reply = await send();
+  if (reply) answerAloud(reply);
+}
+$('#mic').classList.toggle('hidden', !voiceSupported);
+let draftBeforeVoice = '';
+$('#mic').onclick = () => {
+  if (speaking() || $('#mic').dataset.state === 'speaking') { stopSpeaking(); micState('idle'); return; }
+  if (stopListening) { stopListening(); stopListening = null; composer.value = draftBeforeVoice; composer.oninput(); micState('idle'); notify(''); return; }
+  const before = draftBeforeVoice = composer.value.trim();
+  micState('listening'); notify('Listening…');
+  stopListening = listen({
+    onText: text => { composer.value = (before ? before + ' ' : '') + text; composer.oninput(); },
+    onDone: text => { stopListening = null; micState('idle'); notify(text ? '' : "Didn't catch that. Tap the mic and try again."); if (text) void voiceTurn(text, before); },
+    onError: message => { stopListening = null; micState('idle'); notify(message); },
+  });
+};
 composer.oninput = () => { composer.style.height = 'auto'; composer.style.height = Math.min(composer.scrollHeight, 220) + 'px'; controls(); };
 composer.onkeydown = event => { if (preferences.enter && event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void send(); } };
 composer.onpaste = event => { if (event.clipboardData.files.length) { event.preventDefault(); void addFiles([...event.clipboardData.files]); } };
