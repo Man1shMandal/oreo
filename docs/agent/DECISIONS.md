@@ -88,3 +88,10 @@ a bounded retrieval window. Keep their original roles; do not promote user text
 to system instructions. Locate reusable attachments independently. This improves
 continuity without adding a summarization call to response latency. Ownership
 checks, per-account leases and atomic saves remain required.
+
+## 2026-10-08 — Fast default for hosted chat
+New hosted browser sessions default to Haiku for lower response latency. Keep
+Sonnet and the other models in the picker so users can choose more capability
+for harder requests. Reuse the provider client across warm function calls to
+reuse its outbound connection pool; cache by API key so credential rotation does
+not keep using a stale client.

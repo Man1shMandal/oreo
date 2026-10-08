@@ -35,6 +35,9 @@ class HostedChatTests(unittest.TestCase):
             [{'role': 'user', 'content': 'hello'}], {'conversation_id': CHAT, 'remaining': 1000},
         )).start()
         self.save = patch('api.chat.save_turn').start()
+        from api.chat import provider_client
+        provider_client.cache_clear()
+        self.addCleanup(provider_client.cache_clear)
         self.client = patch('api.chat.OpenAI').start()
         self.client.return_value.chat.completions.create.return_value = SimpleNamespace(
             choices=[SimpleNamespace(message=SimpleNamespace(content='hello back'))],
@@ -135,6 +138,21 @@ class HostedChatTests(unittest.TestCase):
         kwargs = self.client.return_value.chat.completions.create.call_args.kwargs
         self.assertEqual(kwargs['messages'], self.prepare.return_value[0])
         self.assertNotIn('max_tokens', kwargs)
+
+
+    def test_hosted_default_is_fast_and_advanced_models_remain_available(self):
+        from api.config import HOSTED_DEFAULT_MODEL, MODEL_LABELS
+        from oreo.config import MODELS
+        self.assertEqual(MODELS[HOSTED_DEFAULT_MODEL], 'claude-4.5-haiku')
+        self.assertEqual(MODEL_LABELS['sonnet'], 'Sonnet · Balanced')
+        self.assertIn('claude-4.6-sonnet', MODELS.values())
+
+    def test_warm_provider_client_is_reused(self):
+        from api.chat import provider_client
+        first = provider_client('test')
+        second = provider_client('test')
+        self.assertIs(first, second)
+        self.client.assert_called_once()
 
 
 class ContextTests(unittest.TestCase):

@@ -4,7 +4,17 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler
 
-from oreo.config import DEFAULT_MODEL, MODELS
+from oreo.config import MODELS
+
+HOSTED_DEFAULT_MODEL = "haiku"
+MODEL_LABELS = {
+    "opus": "Opus · Deep reasoning",
+    "sonnet5": "Sonnet · Advanced",
+    "sonnet": "Sonnet · Balanced",
+    "haiku": "Haiku · Fast",
+    "gpt": "GPT · Fast",
+    "gemini": "Gemini · Fast",
+}
 
 
 class handler(BaseHTTPRequestHandler):
@@ -14,7 +24,8 @@ class handler(BaseHTTPRequestHandler):
                 "supabaseUrl": os.environ.get("SUPABASE_URL", ""),
                 "supabasePublishableKey": os.environ.get("SUPABASE_PUBLISHABLE_KEY", ""),
                 "models": MODELS,
-                "defaultModel": MODELS[DEFAULT_MODEL],
+                "defaultModel": MODELS[HOSTED_DEFAULT_MODEL],
+                "modelLabels": MODEL_LABELS,
             }
         ).encode()
         self.send_response(200)
