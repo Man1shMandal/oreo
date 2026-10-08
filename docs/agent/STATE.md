@@ -124,3 +124,10 @@ Screenshot: /tmp/oreo-context-smoke.png (local test only). No real user chats
 were used. No schema migration. Preserve unrelated AGENTS.md and untracked
 agent pointers/.venv. Release CI/deployment verification follows the code push.
 Real provider response speed has not been benchmarked.
+
+Release follow-up: fa0f51c passed GitHub CI but live health returned 500. Vercel
+runtime logs showed missing httpx because deployment uses pyproject.toml while
+CI installed requirements.txt. Added the dependency to both manifests and a
+regression check enforcing their parity. Final suite now has 60 Python tests
+and 3 JS behavior tests. Full browser verification used a fake model; live
+provider latency remains unmeasured.

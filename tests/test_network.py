@@ -1,6 +1,8 @@
 """Pooled requests retain auth errors and isolate per-request credentials."""
 
 import unittest
+import tomllib
+from pathlib import Path
 import urllib.error
 from unittest.mock import patch
 
@@ -9,6 +11,12 @@ from api import network
 
 
 class NetworkTests(unittest.TestCase):
+    def test_vercel_and_ci_dependencies_match(self):
+        root = Path(__file__).resolve().parent.parent
+        deployed = tomllib.loads((root / 'pyproject.toml').read_text())['project']['dependencies']
+        tested = (root / 'requirements.txt').read_text().splitlines()
+        self.assertEqual(set(deployed), set(tested))
+
     def test_credentials_do_not_leak_between_calls(self):
         seen = []
         def respond(request):
