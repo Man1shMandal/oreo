@@ -243,5 +243,8 @@ replacing the entire answer every 40 ms. Removed the per-message entrance
 animation, which replayed whenever a message was inserted. Bumped the offline
 shell cache to v6 so installed apps can pick up the updated chat script.
 Validation: all 68 Python tests, 3 Node chat UI tests, JavaScript syntax, and
-`git diff --check` pass. No production latency benchmark was run. Not released
-or deployed.
+`git diff --check` pass. No production latency benchmark was run. Released in
+commit `3f386a2` to
+`origin/main`; GitHub verification run `37800616420` passed. The live health
+endpoint returns ok and production `/chat.js` contains the streamed text-node
+rendering change.
