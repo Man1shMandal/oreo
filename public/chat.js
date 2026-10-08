@@ -12,9 +12,11 @@ const welcome = '<div class="welcome"><h1>What can I help you with?</h1><p>Ask a
 const notify = text => { $('#status').textContent = text; $('#auth-status').textContent = text; };
 const controls = () => {
   const blocked = busy || loading || reading || !ready;
-  const eye = $('#oreo-eye'), active = busy || loading || reading;
-  eye.classList.toggle('working', active);
-  eye.classList.toggle('attentive', !active && ready && Boolean(composer.value.trim()));
+  const active = busy || loading || reading;
+  for (const eye of document.querySelectorAll('.oreo-eye')) {
+    eye.classList.toggle('working', active);
+    eye.classList.toggle('attentive', !active && ready && Boolean(composer.value.trim()));
+  }
   $('#send').disabled = blocked || (!composer.value.trim() && !pending.length);
   composer.disabled = busy || loading || !ready;
   for (const id of ['attach', 'web', 'model', 'new-chat', 'open-settings']) $('#' + id).disabled = blocked;
