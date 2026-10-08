@@ -159,4 +159,21 @@ Sonnet remains selectable. Full check: 62 Python tests, 3 JavaScript behavior
 tests, JS syntax, Python compile and diff whitespace all pass. The local mock
 browser flow streams a long answer and answers a context-dependent follow-up.
 No real provider latency benchmark has been run, so no measured speed claim.
-Current additional changes are being prepared for a follow-up deployment.
+
+## 2026-10-08 — Minimal black hosted UI
+Updated the hosted app to a pure-black canvas with restrained charcoal surfaces,
+system typography, simplified line icons, and a single biscuit mark used across
+the sidebar, mobile header, sign-in, favicon and installable-app icons. Removed
+the welcome-screen eyebrow and starter cards. Aligned the chat-inserted welcome
+copy with the static page, updated the browser theme color and PWA colors, and
+added `public/theme.css` to the static route, offline shell and asset MIME test.
+
+The local fake-auth preview at 127.0.0.1:4801 showed the mobile screen with the
+black theme, composer and small biscuit mark; browser inspection confirmed the
+stylesheet loaded and the canvas computes to rgb(0, 0, 0). Validation: 62 Python
+unittest cases pass, 3 Node UI behavior tests pass, JavaScript syntax checks,
+Python compileall and `git diff --check` pass. No real account or provider was
+used. Production deployment and smoke checks follow the commit push.
+
+Preserve unrelated modified `AGENTS.md` and untracked
+`.github/copilot-instructions.md`, `.venv` symlink and `GEMINI.md`.

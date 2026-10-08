@@ -8,7 +8,7 @@ let defaultModel = '';
 let supabase, user = null, epoch = 0, chatId = null, rows = [], conversations = [];
 const previewUrls = new Set();
 let pending = [], busy = false, loading = false, reading = false, ready = false, web = false;
-const welcome = '<div class="welcome"><h1>What are we working on?</h1><p>Ask a question, share an idea, or start with a file.</p></div>';
+const welcome = '<div class="welcome"><h1>What can I help you with?</h1><p>Ask a question or start with a file.</p></div>';
 const notify = text => { $('#status').textContent = text; $('#auth-status').textContent = text; };
 const controls = () => {
   const blocked = busy || loading || reading || !ready;
