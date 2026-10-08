@@ -181,3 +181,19 @@ to black; the theme-color metadata is `#000000` and the Oreo favicon is linked.
 
 Preserve unrelated modified `AGENTS.md` and untracked
 `.github/copilot-instructions.md`, `.venv` symlink and `GEMINI.md`.
+
+## 2026-10-08 — Wordmark and Settings refinement
+Replaced the cookie mark with the text-only Oreo wordmark across the sidebar,
+mobile header, sign-in, favicon and PWA icons. The header model control is now a
+compact, subdued picker with concise model names; Settings retains descriptive
+model names. Rebuilt Settings as grouped Models, Conversation, Personalization
+and Behavior sections with clearer descriptions, consistent dark controls,
+simple gear and close icons, a scrollable body and a pinned save bar. Kept all
+existing preference field IDs and save/reset/preset behavior. Bumped the offline
+shell cache to v5.
+
+Previewed the signed-in mock at 127.0.0.1:4801. Confirmed the text-only header,
+model picker, Settings hierarchy and all behavior toggles are visible and
+scrollable. The new regression checks Settings hooks. Validation: 63 Python
+unittest tests, 3 Node chat behavior tests, JavaScript syntax checks, Python
+compileall and `git diff --check` pass. This refinement is prepared for release.

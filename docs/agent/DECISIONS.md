@@ -99,7 +99,6 @@ not keep using a stale client.
 ## 2026-10-08 — Minimal black Oreo interface
 The user rejected the decorative blue/light concept and asked for a clean,
 professional Apple-like dark interface. Use pure black as the page canvas,
-quiet charcoal surfaces, restrained system typography, and one small Oreo biscuit
-mark for identity. Keep the chat welcome screen direct and free of promotional
-starter cards. This supersedes the earlier decision to keep the original
-circular mark and avoid a cookie illustration.
+quiet charcoal surfaces, restrained system typography, and the Oreo wordmark
+without a cookie image. Keep the chat welcome screen direct and free of
+promotional starter cards. This supersedes earlier logo decisions.

@@ -93,6 +93,15 @@ class InstallableAppTests(unittest.TestCase):
                 self.assertEqual(headers['Content-Type'], kind)
                 self.assertTrue(body)
 
+    def test_settings_controls_remain_connected_to_preferences(self):
+        from pathlib import Path
+        page = (Path(__file__).resolve().parent.parent / 'public' / 'index.html').read_text()
+        for control in ('settings-form', 'open-settings', 'close-settings', 's-instructions',
+                        's-model', 's-style', 's-context', 's-temperature', 's-files',
+                        's-web', 's-enter', 's-efficient', 's-reset'):
+            with self.subTest(control=control):
+                self.assertIn(f'id="{control}"', page)
+
     def test_manifest_icons_exist(self):
         _, body = self.get('/manifest.webmanifest')
         for icon in json.loads(body)['icons']:
