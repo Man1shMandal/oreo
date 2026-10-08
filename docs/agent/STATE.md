@@ -131,3 +131,32 @@ CI installed requirements.txt. Added the dependency to both manifests and a
 regression check enforcing their parity. Final suite now has 60 Python tests
 and 3 JS behavior tests. Full browser verification used a fake model; live
 provider latency remains unmeasured.
+
+## 2026-10-08 — Resume handoff checks
+Inspected branch worktree-web-ui at b93a405. The worktree has unrelated local
+changes in AGENTS.md, untracked .github/copilot-instructions.md, .venv symlink,
+and GEMINI.md; preserve them. The hosted production app opens to its sign-in
+screen in the isolated browser, so the authenticated Settings dialog could not
+be reviewed visually. Firefox is in an active Meet call and was left untouched.
+No file was uploaded. A production file submission requires uploading a benign
+fixture to the hosted Oreo account and sending its text to the configured model
+provider; waiting for the user's confirmation before that transmission. No
+tests or code changes were made. Next step: after confirmation, sign in if the
+browser permits, submit a generated fixture, request its contents back, and
+verify the saved chat/file flow; otherwise report the specific access blocker.
+
+## 2026-10-08 — Broader hosted speed and behavior audit
+Resolved release verification for b93a405: Vercel reports deployment complete,
+`/api/health` returns ok, unauthenticated conversations and an invalid bearer
+chat request both return the expected 401, and production `chat.js` byte-matches
+the pushed source. GitHub CI passed. The earlier 500 on fa0f51c was a packaging
+manifest mismatch; `httpx` is now declared in both manifests and a parity test
+prevents recurrence.
+
+Continued audit: hosted browser defaults to Haiku for quick replies, model choices
+are named by speed/capability, and warm processes reuse the ABB provider client.
+Sonnet remains selectable. Full check: 62 Python tests, 3 JavaScript behavior
+tests, JS syntax, Python compile and diff whitespace all pass. The local mock
+browser flow streams a long answer and answers a context-dependent follow-up.
+No real provider latency benchmark has been run, so no measured speed claim.
+Current additional changes are being prepared for a follow-up deployment.

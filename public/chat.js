@@ -282,10 +282,10 @@ controls();
 try {
   const response = await fetch('/api/config'); if (!response.ok) throw new Error('Could not load Oreo. Please refresh.');
   const config = await response.json(); if (!config.supabaseUrl || !config.supabasePublishableKey) throw new Error('Sign-in is not configured.');
-  for (const [label, id] of Object.entries(config.models)) $('#model').add(new Option(label, id));
+  for (const [label, id] of Object.entries(config.models)) $('#model').add(new Option(config.modelLabels?.[label] || label, id));
   defaultModel = config.defaultModel;
   $('#model').value = defaultModel;
-  for (const [label, id] of Object.entries(config.models)) $('#s-model').add(new Option(label, id));
+  for (const [label, id] of Object.entries(config.models)) $('#s-model').add(new Option(config.modelLabels?.[label] || label, id));
   installSettings((value, saved) => {
     $('#model').value = value.model; web = value.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web));
     $('#send-hint').textContent = value.enter ? 'Enter to send · Shift + Enter for a new line' : 'Click the arrow to send · Enter for a new line';

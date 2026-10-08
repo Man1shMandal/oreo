@@ -3,6 +3,7 @@
 import json
 import os
 import tempfile
+from functools import lru_cache
 import urllib.error
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
@@ -12,11 +13,18 @@ from openai import OpenAI
 from oreo import attach, config, research
 from api.messages import pack, file_metadata
 from api.network import request_json
+from api.config import HOSTED_DEFAULT_MODEL
 from api.preferences import validate
 from api.conversations import conversation_id, prepare, save_turn, acquire, release, activate_profile
 
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+
+
+@lru_cache(maxsize=2)
+def provider_client(api_key):
+    return OpenAI(api_key=api_key, base_url="https://api.abby.abb.com/api/v1/developers",
+                  timeout=120, max_retries=0)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -139,10 +147,10 @@ class handler(BaseHTTPRequestHandler):
                 else:
                     warnings.append("Web search returned no readable sources. This reply does not use fresh web results.")
                 self.event({"status": "Writing…", "sources": [{"title": s["title"], "url": s["url"]} for s in sources]})
-            model = payload.get("model") if payload.get("model") in config.MODELS.values() else config.MODELS[config.DEFAULT_MODEL]
+            model = payload.get("model") if payload.get("model") in config.MODELS.values() else config.MODELS[HOSTED_DEFAULT_MODEL]
             if any(isinstance(m["content"], list) for m in messages) and not model.startswith("claude"):
                 model = config.VISION_MODEL
-            client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url="https://api.abby.abb.com/api/v1/developers", timeout=120, max_retries=0)
+            client = provider_client(os.environ["ABBY_API_KEY"])
             if wants_stream:
                 self.event({"status": "Waiting for the model…"})
                 chunks = client.chat.completions.create(model=model, messages=messages,
