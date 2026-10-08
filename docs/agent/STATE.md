@@ -225,16 +225,9 @@ Released as `4b7a193` to `origin/main`; GitHub run 37799595183 passed and Vercel
 deployment `dpl_7SCoDR2BYBpxiaxMeZDQiuAWxqnM` is READY with the production alias.
 The live site, theme stylesheet, and `/api/health` each returned HTTP 200.
 
-## 2026-10-08 — Animated header eye
-Added a small monochrome eye beside the chat title (beside the Oreo wordmark on
-mobile). It blinks at rest, looks down when the user types, and shifts its gaze
-gently while chat work is active. It is decorative to assistive technology and
-the existing reduced-motion preference disables its animation. Added a static
-regression test for its markup, activity hooks, and reduced-motion support.
-Validation: all 68 Python tests, 3 Node chat UI behavior tests, JavaScript syntax,
-and `git diff --check` pass. The Python suite needed
-localhost access for its in-process HTTP tests. Inspected on `worktree-web-ui`;
-not released or deployed.
+## 2026-10-08 — Initial header eye concept
+The first detailed eye concept was not released. It was replaced with the
+two-dot treatment below after user feedback.
 
 ## 2026-10-08 — Smoother streamed replies
 Streaming replies now append incoming text to one text node and convert to
@@ -248,3 +241,13 @@ commit `3f386a2` to
 `origin/main`; GitHub verification run `37800616420` passed. The live health
 endpoint returns ok and production `/chat.js` contains the streamed text-node
 rendering change.
+
+## 2026-10-08 — Two-dot header eyes
+Replaced the detailed eye with exactly two small white dots. They blink
+together and bounce gently while typing or while Oreo is working; reduced-motion
+settings disable the animation. Added a regression assertion for exactly two
+dots and bumped the offline shell to v7. Validation: all 68 Python tests, 3
+Node chat UI tests, JavaScript syntax, and `git diff --check` pass. Released in
+commit `2519320` to `origin/main`; GitHub verification run `37800977762` passed.
+Production HTML and CSS serve the dots and animation, and `/api/health` returns
+ok.
