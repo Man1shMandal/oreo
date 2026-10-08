@@ -251,3 +251,12 @@ Node chat UI tests, JavaScript syntax, and `git diff --check` pass. Released in
 commit `2519320` to `origin/main`; GitHub verification run `37800977762` passed.
 Production HTML and CSS serve the dots and animation, and `/api/health` returns
 ok.
+
+## 2026-10-08 — Wordmark-aligned eyes
+Moved the dots out of the chat title and placed them beside the Oreo wordmark
+in the desktop sidebar and mobile header. Motion is now a single 220 ms pop
+when typing or starting work, with a slow blink every 8.2 seconds; reduced-motion
+settings disable both. Validation: all 68 Python tests, 3 Node chat UI tests,
+JavaScript syntax and `git diff --check` pass. Released in commit `2cb3935` to
+`origin/main`; GitHub verification run `37801687965` passed. Production HTML and
+CSS confirm the responsive placement, and `/api/health` returns ok.
