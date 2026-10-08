@@ -102,3 +102,11 @@ professional Apple-like dark interface. Use pure black as the page canvas,
 quiet charcoal surfaces, restrained system typography, and the Oreo wordmark
 without a cookie image. Keep the chat welcome screen direct and free of
 promotional starter cards. This supersedes earlier logo decisions.
+
+## 2026-10-08 — Bound warm auth identity caching
+Hosted requests may reuse an identity already verified by Supabase for up to
+20 seconds on the same warm function instance. Cache only successful user
+records, key by a SHA-256 token digest, and cap expiry at the JWT's `exp` claim.
+This removes repeat auth network hops during quick follow-ups while limiting
+how long a revoked session can benefit from a warm cache. A fresh token always
+goes to Supabase for verification.

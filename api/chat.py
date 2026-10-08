@@ -12,10 +12,12 @@ from openai import OpenAI
 
 from oreo import attach, config, research
 from api.messages import pack, file_metadata
-from api.network import request_json
+from api.network import cached_user, request_json
 from api.config import HOSTED_DEFAULT_MODEL
 from api.preferences import validate
-from api.conversations import conversation_id, prepare, save_turn, acquire, release, activate_profile
+from api.conversations import (
+    conversation_id, prepare, create_conversation, save_turn, acquire, release, activate_profile,
+)
 
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -84,9 +86,11 @@ class handler(BaseHTTPRequestHandler):
 
             publishable_key = os.environ["SUPABASE_PUBLISHABLE_KEY"]
             try:
-                user = request_json(
+                user = cached_user(
+                    token,
                     f"{SUPABASE_URL}/auth/v1/user",
                     {"apikey": publishable_key, "Authorization": f"Bearer {token}"},
+                    request_json,
                 )
             except urllib.error.HTTPError as error:
                 if error.code in (401, 403):
@@ -103,13 +107,15 @@ class handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.streaming = True
                 self.event({"status": "Checking your account…"})
-            try:
-                activate_profile(user_id)
-            except LookupError as error:
-                self.reply(503, {'error': str(error)})
-                return
             self.event({"status": "Preparing your chat…"})
             lock = acquire(user_id)
+            if lock.get('error') == 'approval':
+                try:
+                    activate_profile(user_id)
+                except LookupError as error:
+                    self.reply(503, {'error': str(error)})
+                    return
+                lock = acquire(user_id)
             if lock.get('error'):
                 self.reply(409 if lock['error'] == 'busy' else 503, {'error': 'A reply is already in progress. Please wait.' if lock['error'] == 'busy' else 'Oreo is unavailable right now. Try again shortly.'})
                 return
@@ -169,6 +175,9 @@ class handler(BaseHTTPRequestHandler):
             if not reply or not reply.strip():
                 self.reply(502, {"error": "Oreo returned no answer. Try again shortly.", "conversation_id": chat_id})
                 return
+            if reservation.get('new_conversation_title') is not None:
+                # Keep the new-chat insert off the model's time-to-first-token path.
+                chat_id = create_conversation(user_id, reservation['new_conversation_title'])
             save_turn(user['id'], chat_id, stored_message, pack(reply, sources=[{"title": s["title"], "url": s["url"]} for s in sources]))
             # Let an immediate follow-up acquire the lease before announcing done.
             try:

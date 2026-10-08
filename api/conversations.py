@@ -33,21 +33,30 @@ def prepare(user_id, chat_id, message, settings=None):
     current = unpack(message)
     reuse = preferences['reuse_files'] and not (current.get('documents') or current.get('images'))
     if chat_id:
-        owned = database(f"conversations?id=eq.{chat_id}&user_id=eq.{user_id}&select=id")
+        owned = database(
+            f"conversations?id=eq.{chat_id}&user_id=eq.{user_id}"
+            "&select=id,messages(role,content)"
+            "&messages.order=created_at.desc,id.desc&messages.limit=100"
+        )
         if not owned:
             raise LookupError("Conversation not found.")
-        rows = database(f"messages?conversation_id=eq.{chat_id}&select=role,content&order=created_at.desc,id.desc&limit=100")
+        rows = owned[0].get('messages') or []
         history = select_history(rows, current['text'], preferences, reuse)
     system = SYSTEM_PROMPT + "\n" + STYLE[preferences['reply_style']]
     if preferences['instructions'].strip():
         system += "\nUser's standing instructions:\n" + preferences['instructions'].strip()
     messages = [{"role": "system", "content": system}, *history, {"role": "user", "content": prompt_content(message)}]
+    new_title = None
     if not chat_id:
         files = current.get('files', [])
         title = current['text'] or ', '.join(f['name'] for f in files) or 'New chat'
-        created = database('conversations', 'POST', {'user_id': user_id, 'title': title[:80]})
-        chat_id = created[0]['id']
-    return messages, {'conversation_id': chat_id, 'unlimited': True}
+        new_title = title[:80]
+    return messages, {'conversation_id': chat_id, 'unlimited': True, 'new_conversation_title': new_title}
+
+
+def create_conversation(user_id, title):
+    created = database('conversations', 'POST', {'user_id': user_id, 'title': title})
+    return created[0]['id']
 
 
 def save_turn(user_id, chat_id, message, reply):
