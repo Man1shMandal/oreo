@@ -40,12 +40,12 @@ main { background: #000; }
 .top-leading { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 #chat-title { font-weight: 550; }
 .oreo-eye { display: inline-grid; flex: none; width: 25px; height: 22px; place-items: center; }
+.mobile-eye { display: none; }
 .oreo-eye svg { display: block; width: 22px; height: 16px; overflow: visible; transform-origin: center; }
-.oreo-eye-dot { fill: #f2f2f4; transform-box: fill-box; transform-origin: center; animation: oreo-dot-blink 6.4s ease-in-out infinite; }
-.oreo-eye.attentive svg { animation: oreo-happy-bob 1.5s ease-in-out infinite; }
-.oreo-eye.working svg { animation: oreo-happy-bob .95s ease-in-out infinite; }
+.oreo-eye-dot { fill: #f2f2f4; transform-box: fill-box; transform-origin: center; animation: oreo-dot-blink 8.2s ease-in-out infinite; }
+.oreo-eye.attentive svg, .oreo-eye.working svg { animation: oreo-character-pop .22s ease-out 1; }
 @keyframes oreo-dot-blink { 0%, 47%, 50%, 100% { transform: scaleY(1); } 48.5%, 49% { transform: scaleY(.12); } }
-@keyframes oreo-happy-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1px); } }
+@keyframes oreo-character-pop { 0%, 100% { transform: translateY(0) scale(1); } 55% { transform: translateY(-1px) scale(1.08); } }
 .top-actions { gap: 6px; }
 #model { max-width: 180px; padding: 7px 25px 7px 11px; border: 0; appearance: none; background: transparent; color: #d0d0d4; font-size: 12px; cursor: pointer; }
 #model:hover, #model:focus { color: #fff; }
@@ -146,6 +146,7 @@ textarea:focus-visible { outline: 0; }
   main { height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
   .topbar { height: 52px; padding: 0 10px; }
   .mobile-head { display: flex; align-items: center; gap: 7px; color: #f2f2f4 !important; font-size: 14px !important; }
+  .mobile-eye { display: inline-grid; }
   .top-leading { gap: 7px; }
   .oreo-eye { width: 22px; height: 20px; }
   .oreo-eye svg { width: 20px; height: 15px; }
