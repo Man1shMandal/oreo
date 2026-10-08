@@ -3,6 +3,7 @@
 import io
 import json
 import os
+import re
 import unittest
 from unittest.mock import patch, Mock
 
@@ -68,6 +69,58 @@ class RemovedAdminRouteTests(unittest.TestCase):
                 request.reply = Mock()
                 getattr(request, method)()
                 request.reply.assert_called_once_with(404, {'error': 'Not found.'})
+
+
+class InstallableAppTests(unittest.TestCase):
+    def get(self, path):
+        from api.index import handler
+        request = object.__new__(handler)
+        request.path = path
+        request.headers = {}
+        request.send_response, request.send_header, request.end_headers = Mock(), Mock(), Mock()
+        request.wfile = io.BytesIO()
+        request.do_GET()
+        request.send_response.assert_called_once_with(200)
+        return dict(call.args for call in request.send_header.call_args_list), request.wfile.getvalue()
+
+    def test_app_files_are_served_with_their_types(self):
+        for path, kind in (('/manifest.webmanifest', 'application/manifest+json'), ('/sw.js', 'text/javascript; charset=utf-8'),
+                           ('/icon-192.png', 'image/png'), ('/icon-512.png', 'image/png'),
+                           ('/icon-maskable-512.png', 'image/png'), ('/apple-touch-icon.png', 'image/png')):
+            with self.subTest(path=path):
+                headers, body = self.get(path)
+                self.assertEqual(headers['Content-Type'], kind)
+                self.assertTrue(body)
+
+    def test_manifest_icons_exist(self):
+        _, body = self.get('/manifest.webmanifest')
+        for icon in json.loads(body)['icons']:
+            with self.subTest(icon=icon['src']):
+                self.get(icon['src'])
+
+    def test_service_worker_never_caches_the_api(self):
+        _, body = self.get('/sw.js')
+        self.assertIn("!url.pathname.startsWith('/api/')", body.decode())
+        self.assertIn("request.method !== 'GET'", body.decode())
+
+    def test_offline_shell_has_every_script_the_page_imports(self):
+        # A module missing from the shell list stops the installed app from starting offline.
+        _, worker = self.get('/sw.js')
+        shell = json.loads(re.search(r"const SHELL = (\[.*?\]);", worker.decode()).group(1).replace("'", '"'))
+        _, script = self.get('/chat.js')
+        for module in re.findall(r"from '\./([\w.-]+)'", script.decode()):
+            self.assertIn('/' + module, shell)
+        for path in shell:
+            with self.subTest(path=path):
+                self.get(path)
+
+    def test_ios_gets_install_steps(self):
+        # iOS never fires beforeinstallprompt, so the button must not depend on it there.
+        _, page = self.get('/')
+        _, script = self.get('/chat.js')
+        self.assertIn('id="ios-install"', page.decode())
+        self.assertIn('Add to Home Screen', page.decode())
+        self.assertIn("if (ios && !installed) $('#install').classList.remove('hidden');", script.decode())
 
 
 if __name__ == '__main__':

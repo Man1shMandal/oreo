@@ -26,11 +26,20 @@ class handler(ChatHandler, HostedHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
-        elif path in ("/chat.js", "/markdown.js", "/preferences.js"):
+        elif path in ("/chat.js", "/markdown.js", "/preferences.js", "/sw.js", "/manifest.webmanifest"):
+            body = (Path(__file__).resolve().parent.parent / "public" / path[1:]).read_bytes()
+            kind = "application/manifest+json" if path.endswith(".webmanifest") else "text/javascript; charset=utf-8"
+            self.send_response(200)
+            self.send_header("Content-Type", kind)
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif path in ("/icon-192.png", "/icon-512.png", "/icon-maskable-512.png", "/apple-touch-icon.png"):
             body = (Path(__file__).resolve().parent.parent / "public" / path[1:]).read_bytes()
             self.send_response(200)
-            self.send_header("Content-Type", "text/javascript; charset=utf-8")
-            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Cache-Control", "public, max-age=86400")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
