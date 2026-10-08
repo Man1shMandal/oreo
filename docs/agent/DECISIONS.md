@@ -95,3 +95,11 @@ Sonnet and the other models in the picker so users can choose more capability
 for harder requests. Reuse the provider client across warm function calls to
 reuse its outbound connection pool; cache by API key so credential rotation does
 not keep using a stale client.
+
+## 2026-10-08 — Minimal black Oreo interface
+The user rejected the decorative blue/light concept and asked for a clean,
+professional Apple-like dark interface. Use pure black as the page canvas,
+quiet charcoal surfaces, restrained system typography, and one small Oreo biscuit
+mark for identity. Keep the chat welcome screen direct and free of promotional
+starter cards. This supersedes the earlier decision to keep the original
+circular mark and avoid a cookie illustration.

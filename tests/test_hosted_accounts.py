@@ -85,6 +85,7 @@ class InstallableAppTests(unittest.TestCase):
 
     def test_app_files_are_served_with_their_types(self):
         for path, kind in (('/manifest.webmanifest', 'application/manifest+json'), ('/sw.js', 'text/javascript; charset=utf-8'),
+                           ('/theme.css', 'text/css; charset=utf-8'),
                            ('/icon-192.png', 'image/png'), ('/icon-512.png', 'image/png'),
                            ('/icon-maskable-512.png', 'image/png'), ('/apple-touch-icon.png', 'image/png')):
             with self.subTest(path=path):
