@@ -224,3 +224,24 @@ network latency outside Oreo remain unmeasured.
 Released as `4b7a193` to `origin/main`; GitHub run 37799595183 passed and Vercel
 deployment `dpl_7SCoDR2BYBpxiaxMeZDQiuAWxqnM` is READY with the production alias.
 The live site, theme stylesheet, and `/api/health` each returned HTTP 200.
+
+## 2026-10-08 — Animated header eye
+Added a small monochrome eye beside the chat title (beside the Oreo wordmark on
+mobile). It blinks at rest, looks down when the user types, and shifts its gaze
+gently while chat work is active. It is decorative to assistive technology and
+the existing reduced-motion preference disables its animation. Added a static
+regression test for its markup, activity hooks, and reduced-motion support.
+Validation: all 68 Python tests, 3 Node chat UI behavior tests, JavaScript syntax,
+and `git diff --check` pass. The Python suite needed
+localhost access for its in-process HTTP tests. Inspected on `worktree-web-ui`;
+not released or deployed.
+
+## 2026-10-08 — Smoother streamed replies
+Streaming replies now append incoming text to one text node and convert to
+formatted Markdown once the response completes, instead of reparsing and
+replacing the entire answer every 40 ms. Removed the per-message entrance
+animation, which replayed whenever a message was inserted. Bumped the offline
+shell cache to v6 so installed apps can pick up the updated chat script.
+Validation: all 68 Python tests, 3 Node chat UI tests, JavaScript syntax, and
+`git diff --check` pass. No production latency benchmark was run. Not released
+or deployed.

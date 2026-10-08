@@ -37,7 +37,18 @@ aside { background: var(--side); border-color: #222225; padding: 20px 14px 14px;
 main { background: #000; }
 .topbar { height: 58px; padding: 0 24px; border-color: #222225; background: #000; }
 .topbar strong { color: #e7e7e9; font-size: 13px; }
+.top-leading { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 #chat-title { font-weight: 550; }
+.oreo-eye { display: inline-grid; flex: none; width: 25px; height: 22px; place-items: center; color: #151517; }
+.oreo-eye svg { display: block; width: 25px; height: 19px; overflow: visible; transform-origin: center; animation: oreo-blink 5.2s ease-in-out infinite; }
+.eye-white { fill: #e1e1e5; stroke: #98989e; stroke-width: 1.1; }
+.eye-pupil { transform: translate(0, 0); transition: transform .22s ease; }
+.eye-pupil > circle:first-child { fill: #171719; }
+.eye-glint { fill: #fff; }
+.oreo-eye.attentive .eye-pupil { transform: translate(0, 1px); }
+.oreo-eye.working .eye-pupil { animation: oreo-gaze 1.35s ease-in-out infinite alternate; }
+@keyframes oreo-blink { 0%, 43%, 46%, 100% { transform: scaleY(1); } 44%, 45% { transform: scaleY(.08); } }
+@keyframes oreo-gaze { from { translate: -1px 0; } to { translate: 1px 0; } }
 .top-actions { gap: 6px; }
 #model { max-width: 180px; padding: 7px 25px 7px 11px; border: 0; appearance: none; background: transparent; color: #d0d0d4; font-size: 12px; cursor: pointer; }
 #model:hover, #model:focus { color: #fff; }
@@ -57,6 +68,7 @@ main { background: #000; }
 .turn { margin-bottom: 25px; }
 .user { padding: 11px 15px; border-radius: 17px 17px 5px 17px; background: #1c1c1e; color: #ededf0; }
 .assistant { color: #e4e4e7; line-height: 1.72; }
+.assistant .streaming-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
 .assistant a { color: #dedee2; text-decoration-color: #66666c; text-underline-offset: 3px; }
 .assistant a:hover { color: #fff; text-decoration-color: #bbb; }
 .assistant pre { border-color: #303034; background: #111113; color: #eeeeef; }
@@ -137,6 +149,9 @@ textarea:focus-visible { outline: 0; }
   main { height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
   .topbar { height: 52px; padding: 0 10px; }
   .mobile-head { display: flex; align-items: center; gap: 7px; color: #f2f2f4 !important; font-size: 14px !important; }
+  .top-leading { gap: 7px; }
+  .oreo-eye { width: 22px; height: 20px; }
+  .oreo-eye svg { width: 22px; height: 17px; }
   .mobile-menu { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; }
   .topbar #chat-title { display: none; }
   .top-actions { gap: 1px; }
@@ -182,10 +197,8 @@ button:not(:disabled):not(.mobile-backdrop):active { transform: scale(.97); }
 .box:focus-within { border-color: #68686d; box-shadow: 0 0 0 2px rgb(245 245 247 / 5%); }
 .box textarea { outline: 0; box-shadow: none; appearance: none; -webkit-appearance: none; caret-color: #f5f5f7; }
 #settings .field select:focus, #settings .field textarea:focus { border-color: #68686d; box-shadow: 0 0 0 2px rgb(245 245 247 / 5%); }
-.turn { animation: settle-in .2s cubic-bezier(.2,.75,.3,1) both; }
 .assistant.streaming::after { animation: caret-pulse .9s steps(2, end) infinite; }
 #settings[open] { animation: panel-enter .18s cubic-bezier(.2,.75,.3,1) both; }
-@keyframes settle-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes caret-pulse { 50% { opacity: 0; } }
 @keyframes panel-enter { from { opacity: 0; transform: translateY(6px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @media (max-width: 760px) {
