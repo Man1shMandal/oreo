@@ -22,11 +22,11 @@ class handler(ChatHandler, HostedHandler):
             body = (Path(__file__).resolve().parent.parent / "oreo" / "logo.svg").read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "image/svg+xml")
-            self.send_header("Cache-Control", "public, max-age=3600")
+            self.send_header("Cache-Control", "no-cache")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
-        elif path in ("/chat.js", "/markdown.js", "/sw.js", "/manifest.webmanifest"):
+        elif path in ("/chat.js", "/markdown.js", "/preferences.js", "/sw.js", "/manifest.webmanifest"):
             body = (Path(__file__).resolve().parent.parent / "public" / path[1:]).read_bytes()
             kind = "application/manifest+json" if path.endswith(".webmanifest") else "text/javascript; charset=utf-8"
             self.send_response(200)
@@ -56,5 +56,12 @@ class handler(ChatHandler, HostedHandler):
     def do_POST(self):
         if urlsplit(self.path).path == "/api/chat":
             super().do_POST()
+        else:
+            self.reply(404, {"error": "Not found."})
+
+
+    def do_DELETE(self):
+        if urlsplit(self.path).path == '/api/conversations':
+            self.hosted_DELETE('/api/conversations')
         else:
             self.reply(404, {"error": "Not found."})

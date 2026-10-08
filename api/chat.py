@@ -12,7 +12,8 @@ from openai import OpenAI
 
 from oreo import attach, config, research
 from api.messages import pack, file_metadata
-from api.conversations import MAX_OUTPUT, conversation_id, prepare, save_turn, acquire, release, activate_profile
+from api.preferences import validate
+from api.conversations import conversation_id, prepare, save_turn, acquire, release, activate_profile
 
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
@@ -62,9 +63,7 @@ class handler(BaseHTTPRequestHandler):
             except (ValueError, TypeError, AttributeError):
                 self.reply(400, {"error": "Send a valid conversation ID."})
                 return
-            if len(message) > 6000:
-                self.reply(400, {"error": "Send a message under 6,000 characters."})
-                return
+            preferences = validate(payload.get("settings"))
             uploads = payload.get("files", [])
             if not isinstance(uploads, list) or len(uploads) > 5:
                 self.reply(400, {"error": "Attach up to 5 files at a time."})
@@ -93,43 +92,6 @@ class handler(BaseHTTPRequestHandler):
                     return
                 raise
             user_id = user['id']
-            try:
-                activate_profile(user_id)
-            except LookupError as error:
-                self.reply(503, {'error': str(error)})
-                return
-            lock = acquire(user_id)
-            if lock.get('error'):
-                self.reply(409 if lock['error'] == 'busy' else 503, {'error': 'A reply is already in progress. Please wait.' if lock['error'] == 'busy' else 'Oreo is unavailable right now. Try again shortly.'})
-                return
-            lease = lock['lease']
-            sources = []
-            try:
-                with tempfile.TemporaryDirectory(prefix="oreo-uploads-") as temp_dir:
-                    blocks, image_names, errors = attach.process(uploads, Path(temp_dir))
-                    if errors:
-                        raise ValueError(" · ".join(errors))
-                    if sum(len(block) for block in blocks) > 48000:
-                        raise ValueError("This document is too long for one message. Attach a shorter excerpt (up to 48,000 characters).")
-                    images = [attach.image_part(Path(temp_dir), name) for name in image_names]
-                    stored_message = pack(message, documents=blocks, images=images,
-                                          files=file_metadata(uploads))
-                    messages, reservation = prepare(user_id, chat_id, stored_message, extra_tokens=4000 if payload.get("web") else 0)
-            except LookupError:
-                self.reply(404, {"error": "Conversation not found."})
-                return
-            except ValueError as error:
-                self.reply(400, {"error": str(error)})
-                return
-            if reservation.get("error"):
-                reason = reservation['error']
-                status, error = {
-                    "conversation": (404, "Conversation not found."),
-                    "limit": (429, "Your daily chat limit has been reached. Try again tomorrow (UTC)."),
-                }.get(reason, (503, "Oreo is unavailable right now."))
-                self.reply(status, {"error": error})
-                return
-            chat_id = reservation['conversation_id']
             wants_stream = payload.get("stream") is True
             if wants_stream:
                 self.send_response(200)
@@ -138,12 +100,42 @@ class handler(BaseHTTPRequestHandler):
                 self.send_header("X-Accel-Buffering", "no")
                 self.end_headers()
                 self.streaming = True
-                self.event({"conversation_id": chat_id, "status": "Searching the web…" if payload.get("web") else "Thinking…"})
+                self.event({"status": "Checking your account…"})
+            try:
+                activate_profile(user_id)
+            except LookupError as error:
+                self.reply(503, {'error': str(error)})
+                return
+            self.event({"status": "Preparing your chat…"})
+            lock = acquire(user_id)
+            if lock.get('error'):
+                self.reply(409 if lock['error'] == 'busy' else 503, {'error': 'A reply is already in progress. Please wait.' if lock['error'] == 'busy' else 'Oreo is unavailable right now. Try again shortly.'})
+                return
+            lease = lock['lease']
+            sources = []
+            self.event({"status": "Reading attachments…" if uploads else "Loading conversation…"})
+            try:
+                with tempfile.TemporaryDirectory(prefix="oreo-uploads-") as temp_dir:
+                    blocks, image_names, errors = attach.process(uploads, Path(temp_dir))
+                    if errors:
+                        raise ValueError(" · ".join(errors))
+                    images = [attach.image_part(Path(temp_dir), name) for name in image_names]
+                    stored_message = pack(message, documents=blocks, images=images,
+                                          files=file_metadata(uploads))
+                    messages, reservation = prepare(user_id, chat_id, stored_message, settings=preferences)
+            except LookupError:
+                self.reply(404, {"error": "Conversation not found."})
+                return
+            except ValueError as error:
+                self.reply(400, {"error": str(error)})
+                return
+            chat_id = reservation['conversation_id']
+            self.event({"conversation_id": chat_id, "status": "Searching the web…" if payload.get("web") else "Connecting to the model…"})
             warnings = []
             if payload.get("web"):
                 sources = self.search_web(messages)
                 if sources:
-                    # Research context is bounded by the budget reserved before any model call.
+                    # Keep fetched context short so research does not dominate the prompt.
                     context = research.block(sources)[:13000]
                     content = messages[-1]["content"]
                     if isinstance(content, str):
@@ -158,8 +150,9 @@ class handler(BaseHTTPRequestHandler):
                 model = config.VISION_MODEL
             client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url="https://api.abby.abb.com/api/v1/developers", timeout=120, max_retries=0)
             if wants_stream:
+                self.event({"status": "Waiting for the model…"})
                 chunks = client.chat.completions.create(model=model, messages=messages,
-                    max_tokens=MAX_OUTPUT, temperature=0.7, stream=True)
+                    temperature=preferences["temperature"], stream=True)
                 pieces = []
                 for chunk in chunks:
                     if chunk.choices and chunk.choices[0].delta.content:
@@ -169,13 +162,13 @@ class handler(BaseHTTPRequestHandler):
                 reply = "".join(pieces)
             else:
                 completion = client.chat.completions.create(model=model, messages=messages,
-                    max_tokens=MAX_OUTPUT, temperature=0.7)
+                    temperature=preferences["temperature"])
                 reply = completion.choices[0].message.content
             if not reply or not reply.strip():
                 self.reply(502, {"error": "Oreo returned no answer. Try again shortly.", "conversation_id": chat_id})
                 return
             save_turn(user['id'], chat_id, stored_message, pack(reply, sources=[{"title": s["title"], "url": s["url"]} for s in sources]))
-            self.reply(200, {"reply": reply, "conversation_id": chat_id, "remaining": reservation['remaining'], "warnings": warnings, "model": model, "attachment_errors": errors, "sources": [{"title": s["title"], "url": s["url"]} for s in sources]})
+            self.reply(200, {"reply": reply, "conversation_id": chat_id, "unlimited": True, "warnings": warnings, "model": model, "attachment_errors": errors, "sources": [{"title": s["title"], "url": s["url"]} for s in sources]})
         except (ValueError, UnicodeDecodeError):
             self.reply(400, {"error": "Send a valid JSON message."})
         except Exception:
@@ -188,7 +181,7 @@ class handler(BaseHTTPRequestHandler):
                     pass
 
     def search_web(self, messages):
-        # These messages have already passed ownership and budget checks.
+        # These messages have already passed ownership checks.
         rows = []
         for m in messages:
             if m["role"] != "system":
@@ -197,20 +190,10 @@ class handler(BaseHTTPRequestHandler):
         query = rows[-1]["content"]
         links = research.URL.findall(query)[:3]
 
-        class SearchProvider:
-            def stream(self, model, messages, **params):
-                client = OpenAI(api_key=os.environ["ABBY_API_KEY"], base_url=config.BASE_URL, timeout=30, max_retries=0)
-                result = client.chat.completions.create(model=model, messages=messages, stream=False, **params)
-                yield result.choices[0].message.content or "NONE"
-
-        class SearchChat:
-            summary = ""
-            messages = rows
-
         try:
-            queries = [] if links else research.plan(SearchProvider(), SearchChat())
+            queries = [] if links else [query[:500]] if query.strip() else []
             if not queries and not links:
                 return []
-            return research.gather(queries, links, research.keywords(query + " " + " ".join(queries)), lambda _status: None)
+            return research.gather(queries, links, research.keywords(query), lambda _status: None)
         except Exception:
             return []

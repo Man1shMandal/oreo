@@ -21,9 +21,9 @@ or non-GET requests, so chats and tokens stay out of the cache. Raise `CACHE` in
 `sw.js` if the list of shell files changes.
 
 The browser sends up to five files with a combined size of 2.2 MB after photo
-resizing. The server limits JSON bodies to 3.2 MB and document text to 48,000
-characters. Longer documents need a shorter excerpt. These limits keep requests
-within serverless limits and the account budget.
+resizing. The server limits JSON bodies to 3.2 MB to fit serverless requests.
+Document extraction retains up to 200,000 characters per file. These are upload
+and processing bounds, not daily token quotas.
 
 Versioned content in the existing messages table retains extracted document
 text, model-readable PDF image parts, small image previews, original file names,
@@ -38,15 +38,24 @@ messages or usage. Apply the existing three migrations for a fresh installation,
 then run `supabase/tests/hosted_v1.sql`. The legacy approved flag is automatically
 enabled by the server; it does not require manual user approval.
 
-The gateway omits actual usage. Before any answer or search-planning model call,
-the server reserves estimated prompt usage and the full 2,048-token answer cap.
-Web-enabled calls reserve another 4,000 estimated tokens for planning and bounded
-research context. PDF image estimates account for page count. Failed requests
-keep their reservation. Budgets reset at midnight UTC and are estimates, not a
-provider billing meter. A server-only lease serializes requests per account.
+All authenticated accounts have no application daily token quota. Chat no longer
+calls reserve_chat or writes daily_usage, and answer calls have no application
+max_tokens cap. Provider context, output, and account limits still apply. Legacy
+quota tables/functions remain for schema compatibility; no migration is needed.
+A server-only lease serializes requests per account and saves remain owned.
+
+Settings is visible in the chat header. It offers custom standing instructions,
+default model, reply style, creativity, recent history depth, attachment reuse,
+web defaults, and Enter behavior. Preferences are stored per account in this
+browser, not synced between devices. Efficient history uses approximately 600
+tokens of text; balanced approximately 1,500; extended approximately 8,000.
+Follow-ups select relevant excerpts from the latest document instead of sending
+all previous files. Brief replies and optional web research save more tokens.
+No extra summarization model call is needed. New uploads are still sent in full.
+The original circular Oreo mark is shared across hosted and local surfaces.
 
 Run `.venv/bin/python -m unittest discover -s tests -v`, Python compilation,
-`node --check public/chat.js`, `node --check public/markdown.js`, and
+`node --check public/chat.js`, `node --check public/markdown.js`, `node --check public/preferences.js`, and
 `git diff --check` before release. Use an isolated fake-auth/model server for
 browser checks. For production verify Google sign-in, streaming, file follow-ups,
 reopened history and citations, model selection, new chat, and sign-out.

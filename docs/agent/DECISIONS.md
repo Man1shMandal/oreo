@@ -65,3 +65,17 @@ Validate public URLs again on redirects as well as on the first fetch.
 Show the account allowance as a small ring, with exact numbers and reset time in
 its tooltip and accessible label. Use one canonical `oreo/logo.svg` asset across
 the hosted sign-in, sidebar, mobile header, browser favicon, and local browser UI.
+
+## 2026-10-07 — Unlimited hosted access and visible personal settings
+Supersedes earlier quota/ring and answer-cap decisions. The user requested no
+application token limits for any account. Create owned conversations directly,
+retain owned save/lease functions, and bypass reserve_chat and daily_usage.
+Remove the answer max_tokens field; provider limits remain outside Oreo's control.
+Keep legacy SQL for compatibility rather than requiring a destructive migration.
+
+Settings are per-account browser preferences: standing instructions, model,
+style, creativity, context depth, file reuse, web defaults, and Enter behavior.
+Use compact recent history and ranked document excerpts to reduce input tokens;
+do not enforce a quota or truncate answers to make usage small. Preferences do
+not sync across devices. Restore the original simple circular Oreo mark in the
+shared SVG; avoid a new cookie illustration.
