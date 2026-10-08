@@ -282,7 +282,8 @@ controls();
 try {
   const response = await fetch('/api/config'); if (!response.ok) throw new Error('Could not load Oreo. Please refresh.');
   const config = await response.json(); if (!config.supabaseUrl || !config.supabasePublishableKey) throw new Error('Sign-in is not configured.');
-  for (const [label, id] of Object.entries(config.models)) $('#model').add(new Option(config.modelLabels?.[label] || label, id));
+  const compactModelNames = { opus: 'Opus', sonnet5: 'Sonnet 5', sonnet: 'Sonnet', haiku: 'Haiku', gpt: 'GPT', gemini: 'Gemini' };
+  for (const [label, id] of Object.entries(config.models)) $('#model').add(new Option(compactModelNames[label] || config.modelLabels?.[label] || label, id));
   defaultModel = config.defaultModel;
   $('#model').value = defaultModel;
   for (const [label, id] of Object.entries(config.models)) $('#s-model').add(new Option(config.modelLabels?.[label] || label, id));
