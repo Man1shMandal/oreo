@@ -1,12 +1,11 @@
 """Authenticated account and history endpoints."""
 
-import json
 import os
 import urllib.error
-import urllib.request
 from urllib.parse import parse_qs, urlsplit
 
 from api.conversations import conversation_id, database, activate_profile
+from api.network import request_json
 
 
 class AccessError(Exception):
@@ -18,13 +17,11 @@ def identity(headers):
     token = headers.get('Authorization', '').removeprefix('Bearer ').strip()
     if not token:
         raise AccessError(401, 'Please sign in.')
-    request = urllib.request.Request(
-        os.environ['SUPABASE_URL'].rstrip('/') + '/auth/v1/user',
-        headers={'apikey': os.environ['SUPABASE_PUBLISHABLE_KEY'], 'Authorization': 'Bearer ' + token},
-    )
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            user = json.load(response)
+        user = request_json(
+            os.environ['SUPABASE_URL'].rstrip('/') + '/auth/v1/user',
+            {'apikey': os.environ['SUPABASE_PUBLISHABLE_KEY'], 'Authorization': 'Bearer ' + token},
+        )
     except urllib.error.HTTPError as error:
         if error.code in (401, 403):
             raise AccessError(401, 'Your sign-in has expired. Please sign in again.') from error

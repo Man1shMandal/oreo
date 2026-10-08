@@ -79,3 +79,12 @@ Use compact recent history and ranked document excerpts to reduce input tokens;
 do not enforce a quota or truncate answers to make usage small. Preferences do
 not sync across devices. Restore the original simple circular Oreo mark in the
 shared SVG; avoid a new cookie illustration.
+
+## 2026-10-08 — Preserve turns without an extra model call
+Context selection must never discard the entire conversation because the latest
+answer exceeds the text budget. Keep recent question/answer pairs, explicitly
+shorten oversized messages, and reserve space for older relevant excerpts from
+a bounded retrieval window. Keep their original roles; do not promote user text
+to system instructions. Locate reusable attachments independently. This improves
+continuity without adding a summarization call to response latency. Ownership
+checks, per-account leases and atomic saves remain required.

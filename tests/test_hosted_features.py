@@ -76,6 +76,23 @@ class FeatureTests(unittest.TestCase):
         self.assertEqual(''.join(e.get('text', '') for e in events), 'hello back')
         self.assertTrue(events[-1]['done']); self.save.assert_called_once_with(USER, CHAT, 'hello', 'hello back')
 
+    def test_lease_is_released_before_stream_completion(self):
+        from api.chat import handler
+        order = []
+        self.save.side_effect = lambda *args: order.append('save')
+        self.release.side_effect = lambda *args: order.append('release')
+        original = handler.event
+        def event(request, payload):
+            if payload.get('done'):
+                order.append('done')
+            original(request, payload)
+        self.client.return_value.chat.completions.create.return_value = iter([
+            SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='reply'))])])
+        with patch.object(handler, 'event', event):
+            self.stream_post()
+        self.assertEqual(order, ['save', 'release', 'done'])
+        self.release.assert_called_once()
+
     def test_stream_save_failure_is_an_error(self):
         self.client.return_value.chat.completions.create.return_value = iter([SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='reply'))])])
         self.save.side_effect = RuntimeError('database unavailable')

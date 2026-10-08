@@ -4,7 +4,7 @@ import re
 from api.messages import unpack
 
 DEFAULTS = {"instructions": "", "reply_style": "brief", "context": "efficient", "temperature": 0.7, "reuse_files": True}
-HISTORY = {"efficient": 2400, "balanced": 6000, "extended": 32000}
+HISTORY = {"efficient": 12000, "balanced": 24000, "extended": 64000}
 STYLE = {"brief": "Use short, direct answers. Expand when the task needs detail.", "balanced": "Give enough detail to explain the answer clearly.", "thorough": "Give a thorough answer when useful. Include relevant reasoning and examples."}
 
 
@@ -34,6 +34,7 @@ def history_content(content, question, reuse, attachment_chars):
         names = [f.get('name', 'file') for f in value.get('files', [])]
         return text + ('\n[Earlier attachments: ' + ', '.join(names) + ']' if names else '')
     words = set(re.findall(r'\w{3,}', question.lower()))
+    attachment_chars = max(1, attachment_chars // max(1, len(documents)))
     for document in documents:
         if len(document) <= attachment_chars:
             excerpt = document
