@@ -12,6 +12,9 @@ const welcome = '<div class="welcome"><h1>What can I help you with?</h1><p>Ask a
 const notify = text => { $('#status').textContent = text; $('#auth-status').textContent = text; };
 const controls = () => {
   const blocked = busy || loading || reading || !ready;
+  const eye = $('#oreo-eye'), active = busy || loading || reading;
+  eye.classList.toggle('working', active);
+  eye.classList.toggle('attentive', !active && ready && Boolean(composer.value.trim()));
   $('#send').disabled = blocked || (!composer.value.trim() && !pending.length);
   composer.disabled = busy || loading || !ready;
   for (const id of ['attach', 'web', 'model', 'new-chat', 'open-settings']) $('#' + id).disabled = blocked;
@@ -171,12 +174,17 @@ async function send() {
   const userEl = message(outgoing); timeline.append(userEl);
   const replyEl = message({ role: 'assistant', content: { text: '' } }); replyEl.classList.add('streaming'); timeline.append(replyEl);
   stage.scrollTop = stage.scrollHeight;
-  let reply = '', done = null, receivedChat = chatId, paint = null;
+  const replyBody = replyEl.querySelector('.md');
+  replyBody.classList.add('streaming-plain');
+  const streamText = document.createTextNode('');
+  replyBody.append(streamText);
+  let reply = '', displayedLength = 0, done = null, receivedChat = chatId, paint = null;
   const paintReply = () => {
     paint = null;
     if (expected !== epoch) return;
     const nearBottom = stage.scrollHeight - stage.scrollTop - stage.clientHeight < 140;
-    replyEl.querySelector('.md').innerHTML = markdown(reply);
+    streamText.appendData(reply.slice(displayedLength));
+    displayedLength = reply.length;
     if (nearBottom) stage.scrollTop = stage.scrollHeight;
   };
   try {
@@ -206,7 +214,9 @@ async function send() {
     }
     if (expected !== epoch) return;
     if (!done) throw new Error('The connection ended before the reply was saved. Refresh this chat before retrying.');
-    clearTimeout(paint); reply = done.reply; paintReply(); sourceLinks(replyEl, done.sources);
+    clearTimeout(paint); reply = done.reply; paintReply();
+    replyBody.classList.remove('streaming-plain'); replyBody.innerHTML = markdown(reply);
+    sourceLinks(replyEl, done.sources);
     if (done.model !== $('#model').value) { const note = document.createElement('div'); note.className = 'meta'; note.textContent = 'Used a vision model for this image.'; replyEl.append(note); }
     chatId = done.conversation_id; rows.push(outgoing, { role: 'assistant', content: { text: reply, sources: done.sources } });
     pending = []; tray(); composer.value = ''; composer.style.height = 'auto';

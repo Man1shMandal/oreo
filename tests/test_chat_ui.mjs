@@ -7,7 +7,8 @@ const source = readFileSync(new URL('../public/chat.js', import.meta.url), 'utf8
 
 function harness(events) {
   let writes = 0;
-  const body = { set innerHTML(value) { writes++; }, get innerHTML() { return ''; } };
+  let streamed = '', html = '';
+  const body = { classList: { add() {}, remove() {} }, append() {}, set innerHTML(value) { writes++; html = value; }, get innerHTML() { return html; } };
   const node = () => ({ classList: { add() {}, remove() {}, toggle() {} }, append() {}, remove() {}, querySelector: () => body });
   const elements = new Map();
   const requests = [];
@@ -18,6 +19,7 @@ function harness(events) {
     composer: { value: 'Remember Cedar', style: {}, focus() {}, dispatchEvent() {} },
     timeline: { querySelector: () => null, append() {} },
     stage: { scrollHeight: 100, scrollTop: 0, clientHeight: 100 },
+    document: { createTextNode() { return { appendData(value) { streamed += value; } }; } },
     controls() {}, tray() {}, notify() {}, message: node, markdown: text => text,
     sourceLinks() {}, renderSidebar() {}, render() {}, Event: class {},
     TextDecoder, Uint8Array, Date,
@@ -39,7 +41,7 @@ function harness(events) {
   }
   vm.createContext(sandbox);
   vm.runInContext(source.slice(source.indexOf('async function send()'), source.indexOf("$('#send').onclick")), sandbox);
-  return { sandbox, requests, timers, writes: () => writes };
+  return { sandbox, requests, timers, writes: () => writes, streamed: () => streamed, html: () => body.innerHTML };
 }
 
 test('stream batches rendering and unlocks send without account round trips', async () => {
@@ -56,6 +58,8 @@ test('stream batches rendering and unlocks send without account round trips', as
   assert.equal(h.sandbox.chatId, 'chat-1');
   assert.equal(h.timers.size, 0);
   assert.equal(h.writes(), 1);
+  assert.equal(h.streamed(), 'Final reply');
+  assert.equal(h.html(), 'Final reply');
 });
 
 test('stream errors restore the draft and cancel pending paints', async () => {
