@@ -2,10 +2,10 @@
 
 Updated 2026-10-08. Active checkout:
 `/Users/manishmandal/oreo/.claude/worktrees/web-ui`, branch `worktree-web-ui`.
-Latest application commit `6bfe682` is pushed to `origin/main`. The hosted app is
+Latest application commit `4b7a193` is pushed to `origin/main`. The hosted app is
 live at https://oreo.manish.engineer with an all-black theme, text-only Oreo
 wordmark, compact model picker and redesigned Settings. Deployment
-`dpl_Hi4jNwxTE1EX3EimRe65NvqEsjVm` is READY. No SQL changes required.
+`dpl_7SCoDR2BYBpxiaxMeZDQiuAWxqnM` is READY. No SQL changes required.
 
 ## Changes
 
@@ -221,3 +221,6 @@ inserted after the model stream, so that write no longer delays the first token.
 Validation: 67 Python tests, 3 JavaScript behavior tests, HTML parsing and
 `git diff --check` pass. No real-provider latency benchmark was run; model and
 network latency outside Oreo remain unmeasured.
+Released as `4b7a193` to `origin/main`; GitHub run 37799595183 passed and Vercel
+deployment `dpl_7SCoDR2BYBpxiaxMeZDQiuAWxqnM` is READY with the production alias.
+The live site, theme stylesheet, and `/api/health` each returned HTTP 200.
