@@ -11,6 +11,13 @@ Images are resized in the browser and wrapped as PDF files for ABB's gateway.
 Requests containing images use Claude when a non-Claude model was selected.
 Web results have citations; unavailable search results produce an explicit notice.
 
+Voice chat uses the browser's own speech recognition and speech output, so it
+needs no key and adds no server calls. The Voice button sends what you say and
+reads the answer aloud; tap it again to cancel or stop. Saying "new chat", "turn
+web on/off", "open settings", "read that again" or "stop" runs that action
+instead of sending it (`public/voice.js`). Firefox has no recognition, so the
+button is hidden there.
+
 Oreo installs as an app on phones, tablets and computers. Chrome, Edge and
 Android show an Install button in the sidebar. iPhone and iPad never offer that
 prompt, so there the same button shows how to use Share, then Add to Home Screen.

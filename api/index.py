@@ -26,7 +26,7 @@ class handler(ChatHandler, HostedHandler):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
-        elif path in ("/chat.js", "/markdown.js", "/preferences.js", "/sw.js", "/manifest.webmanifest", "/theme.css"):
+        elif path in ("/chat.js", "/markdown.js", "/preferences.js", "/voice.js", "/sw.js", "/manifest.webmanifest", "/theme.css"):
             body = (Path(__file__).resolve().parent.parent / "public" / path[1:]).read_bytes()
             kind = ("application/manifest+json" if path.endswith(".webmanifest") else
                     "text/css; charset=utf-8" if path.endswith(".css") else
