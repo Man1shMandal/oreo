@@ -173,7 +173,11 @@ black theme, composer and small biscuit mark; browser inspection confirmed the
 stylesheet loaded and the canvas computes to rgb(0, 0, 0). Validation: 62 Python
 unittest cases pass, 3 Node UI behavior tests pass, JavaScript syntax checks,
 Python compileall and `git diff --check` pass. No real account or provider was
-used. Production deployment and smoke checks follow the commit push.
+used. Released as commit `6e321b6` to `origin/main`. GitHub verification run
+37796096710 passed, and Vercel deployment `dpl_FnBHTSgYa3hZh3S5cdLBPgcPf6zD`
+is READY with `oreo.manish.engineer` attached. The live browser confirmed the
+custom domain serves the new page, loads `/theme.css`, and computes the canvas
+to black; the theme-color metadata is `#000000` and the Oreo favicon is linked.
 
 Preserve unrelated modified `AGENTS.md` and untracked
 `.github/copilot-instructions.md`, `.venv` symlink and `GEMINI.md`.
