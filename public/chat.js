@@ -87,11 +87,8 @@ function renderSidebar() {
   $('#chat-title').textContent = conversations.find(row => row.id === chatId)?.title || 'New chat'; controls();
 }
 async function account(expected = epoch) {
-  const data = await api('/api/profile'); if (expected !== epoch) return;
-  ready = true;
-  controls();
   const historyData = await api('/api/conversations'); if (expected !== epoch) return;
-  conversations = historyData.conversations; renderSidebar();
+  ready = true; conversations = historyData.conversations; renderSidebar();
 }
 function clearFiles() { for (const file of pending) if (file.preview) URL.revokeObjectURL(file.preview); pending = []; tray(); }
 function resetDraft() { for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); }
@@ -174,7 +171,14 @@ async function send() {
   const userEl = message(outgoing); timeline.append(userEl);
   const replyEl = message({ role: 'assistant', content: { text: '' } }); replyEl.classList.add('streaming'); timeline.append(replyEl);
   stage.scrollTop = stage.scrollHeight;
-  let reply = '', done = null, receivedChat = chatId;
+  let reply = '', done = null, receivedChat = chatId, paint = null;
+  const paintReply = () => {
+    paint = null;
+    if (expected !== epoch) return;
+    const nearBottom = stage.scrollHeight - stage.scrollTop - stage.clientHeight < 140;
+    replyEl.querySelector('.md').innerHTML = markdown(reply);
+    if (nearBottom) stage.scrollTop = stage.scrollHeight;
+  };
   try {
     const response = await request('/api/chat', { method: 'POST', body: JSON.stringify({ message: text, conversation_id: chatId, files: files.map(({ name, type, data }) => ({ name, type, data })), model: $('#model').value, web, stream: true, settings: preferences }) });
     if (!response.ok || !response.headers.get('content-type')?.includes('text/event-stream')) {
@@ -187,9 +191,8 @@ async function send() {
       if (event.error) throw new Error(event.error);
       if (event.status) notify(event.status);
       if (event.text) {
-        const nearBottom = stage.scrollHeight - stage.scrollTop - stage.clientHeight < 140;
-        reply += event.text; replyEl.querySelector('.md').innerHTML = markdown(reply);
-        if (nearBottom) stage.scrollTop = stage.scrollHeight;
+        reply += event.text;
+        if (paint === null) paint = setTimeout(paintReply, 40);
       }
       if (event.done) done = event;
     };
@@ -203,13 +206,15 @@ async function send() {
     }
     if (expected !== epoch) return;
     if (!done) throw new Error('The connection ended before the reply was saved. Refresh this chat before retrying.');
-    reply = done.reply; replyEl.querySelector('.md').innerHTML = markdown(reply); sourceLinks(replyEl, done.sources);
+    clearTimeout(paint); reply = done.reply; paintReply(); sourceLinks(replyEl, done.sources);
     if (done.model !== $('#model').value) { const note = document.createElement('div'); note.className = 'meta'; note.textContent = 'Used a vision model for this image.'; replyEl.append(note); }
     chatId = done.conversation_id; rows.push(outgoing, { role: 'assistant', content: { text: reply, sources: done.sources } });
     pending = []; tray(); composer.value = ''; composer.style.height = 'auto';
     // Preview URLs stay alive for this open chat; history uses saved file names.
     web = preferences.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web));
-    try { await account(expected); } catch { notify('Reply saved. Could not refresh your chats yet.'); }
+    const saved = conversations.find(row => row.id === chatId) || { id: chatId, title: (text || files.map(file => file.name).join(', ') || 'New chat').slice(0, 80) };
+    conversations = [{ ...saved, updated_at: new Date().toISOString() }, ...conversations.filter(row => row.id !== chatId)].slice(0, 100);
+    renderSidebar();
     notify((done.warnings || []).join(' '));
   } catch (error) {
     if (expected === epoch) {
@@ -219,7 +224,7 @@ async function send() {
       try { await account(expected); } catch {}
       notify(error.message);
     }
-  } finally { replyEl.classList.remove('streaming'); busy = false; tray(); controls(); if (ready && expected === epoch) composer.focus(); }
+  } finally { clearTimeout(paint); replyEl.classList.remove('streaming'); busy = false; tray(); controls(); if (ready && expected === epoch) composer.focus(); }
 }
 $('#send').onclick = send;
 $('#composer').onsubmit = event => { event.preventDefault(); void send(); };

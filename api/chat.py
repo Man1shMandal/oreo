@@ -4,7 +4,6 @@ import json
 import os
 import tempfile
 import urllib.error
-import urllib.request
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
@@ -12,17 +11,12 @@ from openai import OpenAI
 
 from oreo import attach, config, research
 from api.messages import pack, file_metadata
+from api.network import request_json
 from api.preferences import validate
 from api.conversations import conversation_id, prepare, save_turn, acquire, release, activate_profile
 
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-
-
-def request_json(url, headers, method="GET", data=None):
-    request = urllib.request.Request(url, headers=headers, method=method, data=data)
-    with urllib.request.urlopen(request, timeout=20) as response:
-        return json.load(response)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -168,6 +162,12 @@ class handler(BaseHTTPRequestHandler):
                 self.reply(502, {"error": "Oreo returned no answer. Try again shortly.", "conversation_id": chat_id})
                 return
             save_turn(user['id'], chat_id, stored_message, pack(reply, sources=[{"title": s["title"], "url": s["url"]} for s in sources]))
+            # Let an immediate follow-up acquire the lease before announcing done.
+            try:
+                release(user_id, lease)
+                lease = None
+            except Exception:
+                pass  # The finally block retries; the saved answer still succeeds.
             self.reply(200, {"reply": reply, "conversation_id": chat_id, "unlimited": True, "warnings": warnings, "model": model, "attachment_errors": errors, "sources": [{"title": s["title"], "url": s["url"]} for s in sources]})
         except (ValueError, UnicodeDecodeError):
             self.reply(400, {"error": "Send a valid JSON message."})

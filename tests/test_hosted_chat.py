@@ -25,7 +25,7 @@ class HostedChatTests(unittest.TestCase):
         })
         self.env.start()
         self.server = HTTPServer(('127.0.0.1', 0), handler)
-        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread = threading.Thread(target=lambda: self.server.serve_forever(poll_interval=0.01), daemon=True)
         self.thread.start()
         self.auth = patch('api.chat.request_json', return_value={'id': USER}).start()
         self.activate = patch('api.chat.activate_profile', return_value={'id': USER}).start()
@@ -164,7 +164,7 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(result, {'conversation_id': CHAT, 'unlimited': True})
 
     @patch('api.conversations.database')
-    def test_context_drops_incomplete_oversize_older_turns(self, database):
+    def test_context_keeps_oversize_older_turns_bounded(self, database):
         database.side_effect = [[{'id': CHAT}], [
             {'role': 'assistant', 'content': 'latest reply'},
             {'role': 'user', 'content': 'latest question'},
@@ -172,7 +172,9 @@ class ContextTests(unittest.TestCase):
             {'role': 'user', 'content': 'x' * 6001},
         ]]
         messages, _ = conversations.prepare(USER, CHAT, 'next')
-        self.assertEqual([m['content'] for m in messages[1:]], ['latest question', 'latest reply', 'next'])
+        self.assertEqual([m['role'] for m in messages], ['system', 'user', 'assistant', 'user', 'assistant', 'user'])
+        self.assertEqual([m['content'] for m in messages[-3:]], ['latest question', 'latest reply', 'next'])
+        self.assertEqual(messages[1]['content'], 'x' * 6001)
 
     @patch('api.conversations.database')
     def test_atomic_save_supplies_authenticated_owner(self, database):

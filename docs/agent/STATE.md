@@ -93,3 +93,34 @@ The chat stream now starts after authentication and reports account check,
 conversation setup, attachment reading, web search, and model connection
 phases. This makes the wait before the first answer token visible instead of
 showing only a generic thinking status. No automated tests run.
+
+## 2026-10-08 — Conversation memory and response overhead
+Inspected latest merge bf26602 (installable-app PR #1) on worktree-web-ui.
+GitHub CI/deployment were successful; the live page, health and app assets
+returned 200 and the deployed chat.js matched the merge. User confirmed the
+reported outage had cleared, then requested faster responses and better context.
+
+Fixed the 2,400-character default history cutoff that could drop all context
+after one long answer. New api/context.py scans the last 100 owned messages,
+preserves the last three turns using explicit excerpts when necessary, and
+allocates bounded space to relevant older turns. Latest attachments are found
+independently of recent text. Text budgets are 12k/24k/64k characters, with
+separate bounded attachment excerpts. Saved history is unchanged. This is not
+unlimited long-term memory; messages older than the retrieval window are omitted.
+
+Hosted auth/database calls share an HTTP connection pool with per-request
+credentials. Browser startup uses one history request; saved replies update
+the sidebar locally instead of awaiting profile/history refreshes. Streaming
+markdown batches at 40 ms and flushes on completion. Release the chat lease
+before the done event so immediate follow-ups can start. CI caches pip, cancels
+superseded runs, and includes JavaScript behavior/syntax checks. Test HTTP
+shutdown polling is 10 ms; suite time fell from ~14 s to ~0.4 s locally.
+
+Validation: Python regression suite, JavaScript send/error/account harness,
+all public JS syntax, Python compilation and diff whitespace checks. An isolated
+browser with fake auth/model and in-memory storage streamed a >4k-character
+reply and correctly received prior context for a project-name follow-up.
+Screenshot: /tmp/oreo-context-smoke.png (local test only). No real user chats
+were used. No schema migration. Preserve unrelated AGENTS.md and untracked
+agent pointers/.venv. Release CI/deployment verification follows the code push.
+Real provider response speed has not been benchmarked.

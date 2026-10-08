@@ -47,9 +47,13 @@ A server-only lease serializes requests per account and saves remain owned.
 Settings is visible in the chat header. It offers custom standing instructions,
 default model, reply style, creativity, recent history depth, attachment reuse,
 web defaults, and Enter behavior. Preferences are stored per account in this
-browser, not synced between devices. Efficient history uses approximately 600
-tokens of text; balanced approximately 1,500; extended approximately 8,000.
-Follow-ups select relevant excerpts from the latest document instead of sending
+browser, not synced between devices. Efficient history uses up to roughly 3,000
+tokens of text; balanced roughly 6,000; extended roughly 16,000. Selection scans
+the latest 100 messages, keeps the last three turns even after long answers,
+and includes bounded earlier excerpts ranked against the current question.
+Long messages are shortened with an explicit marker; this is bounded context,
+not permanent memory of every message. No extra model call is needed.
+Attachment excerpts have a separate small budget. Follow-ups select relevant excerpts from the latest document instead of sending
 all previous files. Brief replies and optional web research save more tokens.
 No extra summarization model call is needed. New uploads are still sent in full.
 The original circular Oreo mark is shared across hosted and local surfaces.
@@ -63,3 +67,13 @@ reopened history and citations, model selection, new chat, and sign-out.
 Deploy to the existing Oreo project. Preserve its custom-domain aliases and
 Supabase redirect allowlist. The local terminal and Mac web interfaces continue
 using their existing local settings, Keychain, and chat files.
+
+Hosted auth and database calls reuse HTTPS connections in warm functions. The
+browser loads the account through one authenticated history request and updates
+the sidebar from saved replies without two additional account/history requests.
+Streamed markdown paints at most every 40 ms and flushes the final answer
+immediately. Provider generation and optional web search still affect latency.
+
+CI caches Python dependencies, cancels superseded runs on the same ref, and runs
+Python regressions plus JavaScript behavior and syntax checks. Mock HTTP servers
+use a short shutdown poll instead of waiting half a second after every test.

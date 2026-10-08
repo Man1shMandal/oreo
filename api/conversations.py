@@ -2,11 +2,12 @@
 
 import json
 import os
-import urllib.request
 from uuid import UUID
 
 from api.messages import prompt_content, unpack
-from api.preferences import validate, HISTORY, STYLE, history_content
+from api.preferences import validate, STYLE
+from api.context import select_history
+from api.network import request_json
 
 
 SYSTEM_PROMPT = "You are Oreo, a personal AI assistant. Be direct and useful. No emoji. Do not add creator attribution to replies."
@@ -22,13 +23,8 @@ def database(path, method="GET", payload=None):
     key = os.environ["SUPABASE_SECRET_KEY"]
     headers = {"Prefer": "return=representation", "apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     data = None if payload is None else json.dumps(payload).encode()
-    request = urllib.request.Request(
-        f"{os.environ['SUPABASE_URL'].rstrip('/')}/rest/v1/{path}",
-        headers=headers, method=method, data=data,
-    )
-    with urllib.request.urlopen(request, timeout=20) as response:
-        body = response.read()
-        return json.loads(body) if body else None
+    return request_json(f"{os.environ['SUPABASE_URL'].rstrip('/')}/rest/v1/{path}",
+                        headers, method, data)
 
 
 def prepare(user_id, chat_id, message, settings=None):
@@ -40,22 +36,8 @@ def prepare(user_id, chat_id, message, settings=None):
         owned = database(f"conversations?id=eq.{chat_id}&user_id=eq.{user_id}&select=id")
         if not owned:
             raise LookupError("Conversation not found.")
-        rows = database(f"messages?conversation_id=eq.{chat_id}&select=role,content&order=created_at.desc,id.desc&limit=40")
-        size = 0
-        for row in rows:
-            has_attachment = bool(unpack(row['content']).get('documents') or unpack(row['content']).get('images'))
-            carry = reuse and has_attachment
-            content = history_content(row['content'], current['text'], carry, HISTORY[preferences['context']])
-            cost = len(content) if isinstance(content, str) else len(content[0]['text'])
-            if size + cost > HISTORY[preferences['context']] and not carry:
-                break
-            history.append({"role": row['role'], "content": content})
-            size += cost
-            if carry:
-                reuse = False
-        history.reverse()
-        while history and history[0]['role'] != 'user':
-            history.pop(0)
+        rows = database(f"messages?conversation_id=eq.{chat_id}&select=role,content&order=created_at.desc,id.desc&limit=100")
+        history = select_history(rows, current['text'], preferences, reuse)
     system = SYSTEM_PROMPT + "\n" + STYLE[preferences['reply_style']]
     if preferences['instructions'].strip():
         system += "\nUser's standing instructions:\n" + preferences['instructions'].strip()
