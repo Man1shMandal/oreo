@@ -4,7 +4,10 @@ import io
 import json
 import os
 import re
+import shutil
+import subprocess
 import unittest
+from pathlib import Path
 from unittest.mock import patch, Mock
 
 from api.hosted import HostedHandler
@@ -148,6 +151,31 @@ class InstallableAppTests(unittest.TestCase):
         self.assertIn('id="ios-install"', page.decode())
         self.assertIn('Add to Home Screen', page.decode())
         self.assertIn("if (ios && !installed) $('#install').classList.remove('hidden');", script.decode())
+
+    def test_voice_module_is_served_and_mic_hides_without_support(self):
+        headers, body = self.get('/voice.js')
+        self.assertEqual(headers['Content-Type'], 'text/javascript; charset=utf-8')
+        self.assertIn('export function listen', body.decode())
+        _, page = self.get('/')
+        self.assertIn('<button id="mic" type="button" class="mic hidden"', page.decode())
+        _, script = self.get('/chat.js')
+        self.assertIn("$('#mic').classList.toggle('hidden', !voiceSupported);", script.decode())
+
+
+@unittest.skipUnless(shutil.which('node'), 'Node is needed to run the voice module')
+class VoiceCommandTests(unittest.TestCase):
+    def test_spoken_commands_and_ordinary_questions(self):
+        cases = {
+            'New chat.': 'new-chat', 'Hey Oreo, start a new chat': 'new-chat',
+            'Turn on web search': 'web-on', 'Turn web on.': 'web-on', 'switch off the web': 'web-off',
+            'Open settings': 'settings', 'Read that again': 'repeat', 'Stop.': 'stop',
+            'What is a new chat app?': None, 'How do I turn on web hosting?': None, 'Stop the war in poems': None,
+        }
+        script = ("const { command } = await import('./public/voice.js');"
+                  "console.log(JSON.stringify(Object.fromEntries(JSON.parse(process.argv[1]).map(s => [s, command(s)]))));")
+        result = subprocess.run(['node', '--input-type=module', '-e', script, json.dumps(list(cases))],
+                                capture_output=True, text=True, cwd=Path(__file__).resolve().parent.parent, check=True)
+        self.assertEqual(json.loads(result.stdout), cases)
 
 
 if __name__ == '__main__':
