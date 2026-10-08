@@ -229,14 +229,22 @@ $('#google').onclick = async () => {
 };
 $('#sign-out').onclick = async () => { const { error } = await supabase.auth.signOut(); if (error) notify(error.message); };
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
-// Chrome, Edge and Android offer installs through this event; iOS uses Share > Add to Home Screen instead.
+// Chrome, Edge and Android offer installs through this event. iOS never fires it, so there the
+// button shows the Share > Add to Home Screen steps instead. iPads report themselves as Macs with touch.
 let installPrompt = null;
+const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+if (ios && !installed) $('#install').classList.remove('hidden');
 addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; $('#install').classList.remove('hidden'); });
 addEventListener('appinstalled', () => { installPrompt = null; $('#install').classList.add('hidden'); });
 $('#install').onclick = async () => {
-  if (!installPrompt) return;
+  if (!installPrompt) {
+    if (ios) { document.body.classList.remove('drawer'); $('#ios-install').classList.remove('hidden'); }
+    return;
+  }
   installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; $('#install').classList.add('hidden');
 };
+$('#ios-install-close').onclick = () => $('#ios-install').classList.add('hidden');
 async function show(session) {
   const next = session?.user.id || null;
   document.body.classList.toggle('signed-out', !next); $('#auth').classList.toggle('hidden', !!next); stage.classList.toggle('hidden', !next); $('.compose-wrap').classList.toggle('hidden', !next);

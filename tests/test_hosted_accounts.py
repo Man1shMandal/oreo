@@ -103,6 +103,14 @@ class InstallableAppTests(unittest.TestCase):
         self.assertIn("!url.pathname.startsWith('/api/')", body.decode())
         self.assertIn("request.method !== 'GET'", body.decode())
 
+    def test_ios_gets_install_steps(self):
+        # iOS never fires beforeinstallprompt, so the button must not depend on it there.
+        _, page = self.get('/')
+        _, script = self.get('/chat.js')
+        self.assertIn('id="ios-install"', page.decode())
+        self.assertIn('Add to Home Screen', page.decode())
+        self.assertIn("if (ios && !installed) $('#install').classList.remove('hidden');", script.decode())
+
 
 if __name__ == '__main__':
     unittest.main()
