@@ -2,73 +2,94 @@
 
 Updated 2026-10-07. Active checkout:
 `/Users/manishmandal/oreo/.claude/worktrees/web-ui`, branch `worktree-web-ui`.
-Application commits `c59f326` (hosted rebuild) and `62e230d` (usage ring and shared
-logo) are pushed to `origin/main`. HEAD inspected: `62e230d`.
+Application commit `132c8ef` is pushed to origin/main. Token quotas are removed,
+the original circular logo is restored, and personal Settings is live at
+https://oreo.manish.engineer. Verified custom-domain deployment
+`dpl_ASBE2tUYFtP4kNxutjCP6xXyH8sG` is READY. No SQL changes required.
 
-## Live release
+## Changes
 
-Production: https://oreo.manish.engineer. Verified deployment
-`dpl_3Z8ezAEZt21fJAB8ZBPAYd7pHYRH`, READY, has the custom-domain aliases.
-Supabase migrations 001–003 were previously applied and their rollback-only SQL
-checks passed. This release requires no additional SQL or account configuration.
-Google sign-in grants immediate access; the legacy approval flag is automatically
-enabled on the server for compatibility with deployed quota functions.
+All authenticated users bypass the old reserve_chat/daily_usage quota path.
+New conversations use a server-owned insert, existing conversation ownership is
+checked before history/research, and atomic owned saves and leases remain.
+No application max_tokens answer cap or 6,000-character message limit remains.
+Provider limits and physical upload constraints still apply. No SQL migration.
 
-## What changed
+Visible header Settings includes standing instructions, default model, brief/
+balanced/thorough replies, creativity, efficient/balanced/extended recent context,
+latest attachment reuse, web defaults and Enter behavior. Stored per account in
+this browser, not across devices. Efficient context and ranked earlier-document
+excerpts reduce repeated input without deleting saved history. A fewer-tokens
+preset selects brief replies, efficient context and web off. New uploads are sent
+in full. The shared SVG restores the original simple circular mark everywhere.
 
-Hosted Oreo now has a responsive chat sidebar/mobile drawer, anchored composer,
-streamed replies, safe markdown including lists/tables/code copying, persistent
-conversation history, model selection, file upload/paste/drop, and optional web
-research with persisted citations. Failed sends retain the draft and attachments.
-Chat switching and account changes guard against stale responses and drafts.
+## Checks
 
-Saved message envelopes retain document text, gateway-compatible image PDF
-parts, small image previews, file names and source links. Old plain-text history
-still works. Ownership and budgets are checked before research reads history or
-calls the planner. Research validates public URLs on redirects as well as initial
-fetches. SDK retries are disabled to avoid unreserved repeated requests.
+44 Python mocked tests pass, covering quota-free new chats, ownership, settings
+validation, custom instructions, provider creativity with no output cap, long
+messages, attachments, research citations and streamed save failures. JavaScript
+settings harness passes open/save/reset, efficient preset and account isolation.
+Three JS syntax checks, Python compilation and git diff --check pass.
+Ten production smoke checks pass: page, all three JS modules, logo, health and
+config return 200; protected profile/history return 401 without auth; admin 404.
+The page exposes Settings and custom instructions; preferences.js is deployed.
 
-Photo resizing supports typical large phone images. Current limits: five files,
-2.2 MB combined after resizing, 3.2 MB JSON body, 48,000 extracted document
-characters, and a 2,048-token answer cap. Web-enabled messages reserve another
-4,000 estimated tokens for planning and bounded fetched context. PDF image
-estimates count pages. Failed requests retain their reservation; reset is UTC.
+Earlier production verification covered real Haiku streaming, saved history and
+web sources. Production file submission remains untested (mock upload tests pass).
+Native Firefox preview was interrupted by concurrent user browser activity;
+visual verification of the new settings dialog remains pending.
 
-The user requested no visible token numbers at the top: usage is now a quiet
-ring with exact numbers/reset time in a tooltip and accessible label. One shared
-`oreo/logo.svg` is used by sign-in, sidebar, mobile header and favicon. The local
-browser also uses that same asset. Hosted/local functional storage remains separate.
+## Workspace
 
-## Verification
+Preserve unrelated modified AGENTS.md and untracked GEMINI.md,
+.github/copilot-instructions.md and .venv symlink. No secrets or private chat data
+are recorded. Release is complete. Next useful checks: visual Settings review
+when the browser is available, and a real production file submission/follow-up.
+This release's authenticated model/settings flow is mock-tested; earlier real
+streaming and research checks belong to the previous application release.
 
-- Final Python suite: 41 mocked tests passed, including images, scanned PDFs,
-  saved file follow-ups, web ownership/quota ordering, citations, streamed save
-  success/failure, reserved-prefix escaping and private redirect blocking.
-- Python compilation, both JS syntax checks and `git diff --check` passed.
-- Isolated Firefox fake-auth/model preview verified streaming, markdown code/list/
-  table formatting, citations, new chat, reopened citations, and mobile layout
-  at 375 x 667. It used no real secrets or chat data.
-- Live browser restored the existing signed-in session and saved-chat listing.
-  A short Haiku prompt produced the expected real reply. A real hosted web-search
-  prompt returned an answer with five official Python-source links. Both saved.
-- Nine final public-domain smoke checks passed: page, both JS modules, shared
-  SVG, health and public config return 200; account/history endpoints return
-  401 without auth; removed admin route returns 404. Protected responses use
-  no-store. Public config returns a valid default model ID.
+## 2026-10-07 — Internet/search diagnosis
+Inspected branch worktree-web-ui at 34bc731. Public HTTPS to example.com
+returned 200 and the custom-domain /api/health returned ok. The restricted
+agent sandbox initially failed DNS; the same checks outside it succeeded.
+The actual oreo.research search returned five BBC results, with no DuckDuckGo
+challenge, and direct example.com reading returned 171 characters on this Mac.
+Hosted UI preferences previously defaulted web to false; /api/chat only
+researches when the request web flag is true. New-account default is web=true.
+Existing v1 browser preferences migrate to v2, preserving each setting while
+enabling web once; users can then turn it off and retain that choice. The
+fewer-tokens preset still turns Web off. Hosted authenticated search from
+Vercel remains unverified; next step is reproducing in the signed-in app and
+checking hosted search/planner failures if needed. Authenticated accounts share
+the same chat, files, settings, and research feature paths; no feature gate was
+found. No automated tests run.
 
-Fresh Google OAuth was not repeated; the existing authenticated session was
-verified. Upload processing, persistence and follow-ups were tested with mocks,
-not a production file submission. A large synthetic photo and PDF were generated
-in `/private/tmp/oreo-release-fixtures` for optional further manual verification.
-The live smoke conversation contains only synthetic verification prompts.
 
-## Workspace and next step
+## 2026-10-07 — Chat responsiveness and logo cleanup
+Web search is opt-in by default to avoid slowing ordinary chats. Existing
+preferences migrate without altering other options, and Web defaults off for
+all accounts to keep ordinary replies fast; the Web control stays available. Hosted search now uses the message directly instead of waiting for a
+second model call to plan queries. The composer clears at send and restores its
+text if the request fails. Removed the Oreo mark and favicon from the hosted
+interface. Automated tests not run.
 
-Preserved unrelated modified `AGENTS.md` and untracked provider instruction files
-and `.venv` symlink. No credentials or private conversation contents are recorded
-here. Final handoff refresh accompanies the pushed release notes.
 
-The rebuild and requested UI refinements are live. Next useful check is a real
-PDF/image upload and reopened follow-up; diagnose any user-reported issue against
-this release. For much larger files, use private object storage rather than
-expanding inline message storage indefinitely.
+## 2026-10-07 — Keep the active reply in view
+Sending a message now scrolls the chat to the new assistant placeholder before
+waiting for the server. Streamed text then follows the reply while the reader is
+near the bottom. This prevents the welcome screen from staying in view while a
+reply is appended below it. No automated tests run.
+
+
+## 2026-10-07 — Delete saved chats
+Added a delete control to each sidebar conversation and an authenticated
+DELETE /api/conversations?id=… route. The server filters deletion by both chat
+and signed-in user; conversation message rows cascade with the parent. Deleting
+the open chat returns the user to a fresh chat. No automated tests run.
+
+
+## 2026-10-07 — Show reply preparation progress
+The chat stream now starts after authentication and reports account check,
+conversation setup, attachment reading, web search, and model connection
+phases. This makes the wait before the first answer token visible instead of
+showing only a generic thinking status. No automated tests run.

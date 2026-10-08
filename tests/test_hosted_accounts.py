@@ -3,6 +3,7 @@
 import io
 import json
 import os
+import re
 import unittest
 from unittest.mock import patch, Mock
 
@@ -50,13 +51,12 @@ class AccountTests(unittest.TestCase):
         request.hosted_GET('/api/conversations')
         self.assertEqual(request.result[0], 200)
 
-    def test_usage_uses_owner_and_reports_nonnegative_remaining(self):
-        self.database.return_value = [{'input_tokens': 20000, 'output_tokens': 1000}]
+    def test_profile_is_unlimited_without_reading_daily_usage(self):
         request = Request()
         request.hosted_GET('/api/profile')
-        self.assertEqual(request.result[1]['usage']['remaining'], 0)
-        self.assertNotIn('admin', request.result[1])
-        self.assertIn('user_id=eq.' + USER, self.database.call_args.args[0])
+        self.assertTrue(request.result[1]['unlimited'])
+        self.assertNotIn('usage', request.result[1])
+        self.database.assert_not_called()
 
 
 class RemovedAdminRouteTests(unittest.TestCase):
@@ -102,6 +102,17 @@ class InstallableAppTests(unittest.TestCase):
         _, body = self.get('/sw.js')
         self.assertIn("!url.pathname.startsWith('/api/')", body.decode())
         self.assertIn("request.method !== 'GET'", body.decode())
+
+    def test_offline_shell_has_every_script_the_page_imports(self):
+        # A module missing from the shell list stops the installed app from starting offline.
+        _, worker = self.get('/sw.js')
+        shell = json.loads(re.search(r"const SHELL = (\[.*?\]);", worker.decode()).group(1).replace("'", '"'))
+        _, script = self.get('/chat.js')
+        for module in re.findall(r"from '\./([\w.-]+)'", script.decode()):
+            self.assertIn('/' + module, shell)
+        for path in shell:
+            with self.subTest(path=path):
+                self.get(path)
 
     def test_ios_gets_install_steps(self):
         # iOS never fires beforeinstallprompt, so the button must not depend on it there.

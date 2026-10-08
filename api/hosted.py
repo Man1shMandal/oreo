@@ -4,7 +4,6 @@ import json
 import os
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
 from urllib.parse import parse_qs, urlsplit
 
 from api.conversations import conversation_id, database, activate_profile
@@ -42,10 +41,7 @@ class HostedHandler:
         try:
             user, profile = identity(self.headers)
             if route == '/api/profile':
-                today = datetime.now(timezone.utc).date().isoformat()
-                rows = database(f"daily_usage?user_id=eq.{user['id']}&usage_date=eq.{today}&select=input_tokens,output_tokens")
-                used = sum(rows[0].values()) if rows else 0
-                self.reply(200, {'profile': profile, 'usage': {'date': today, 'used': used, 'remaining': max(0, profile['daily_token_limit'] - used)}})
+                self.reply(200, {'profile': profile, 'unlimited': True})
             else:
                 query = parse_qs(urlsplit(self.path).query)
                 if 'id' not in query:
@@ -58,6 +54,28 @@ class HostedHandler:
                         raise AccessError(404, 'Conversation not found.')
                     messages = database(f'messages?conversation_id=eq.{chat_id}&select=role,content,created_at&order=created_at.asc,id.asc&limit=1000')
                     self.reply(200, {'conversation': rows[0], 'messages': messages})
+        except AccessError as error:
+            self.reply(error.status, {'error': error.message})
+        except (ValueError, TypeError, AttributeError):
+            self.reply(400, {'error': 'Send a valid conversation ID.'})
+        except Exception:
+            self.reply(503, {'error': 'Oreo is unavailable right now. Try again shortly.'})
+
+
+    def hosted_DELETE(self, route):
+        try:
+            user, _profile = identity(self.headers)
+            query = parse_qs(urlsplit(self.path).query)
+            if 'id' not in query:
+                raise AccessError(400, 'Choose a conversation to delete.')
+            chat_id = conversation_id(query['id'][0])
+            rows = database(
+                f"conversations?id=eq.{chat_id}&user_id=eq.{user['id']}&select=id",
+                'DELETE',
+            )
+            if not rows:
+                raise AccessError(404, 'Conversation not found.')
+            self.reply(200, {'deleted': True, 'id': chat_id})
         except AccessError as error:
             self.reply(error.status, {'error': error.message})
         except (ValueError, TypeError, AttributeError):
