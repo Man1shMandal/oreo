@@ -113,7 +113,7 @@ async function account(expected = epoch) {
   ready = true; conversations = historyData.conversations; renderSidebar();
 }
 function clearFiles() { for (const file of pending) if (file.preview) URL.revokeObjectURL(file.preview); pending = []; tray(); }
-function resetDraft() { for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; syncWebButton(); }
+function resetDraft() { endVoice(); spokenDraft = false; for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; syncWebButton(); }
 async function deleteConversation(row) {
   if (busy || loading || reading || !confirm('Delete this chat? This cannot be undone.')) return;
   const expected = epoch; loading = true; controls(); notify('Deleting chat…');
@@ -285,15 +285,49 @@ function runCommand(action) {
   else if (action === 'repeat') { const last = [...timeline.querySelectorAll('.assistant .md')].pop(); if (last) answerAloud(last.textContent); else announce('There is no answer to read yet.'); }
   else { stopSpeaking(); micState('idle'); notify(''); }
 }
-function pauseListening(message) {
-  if (!stopListening) return;
-  stopListening(); stopListening = null; micState('idle'); notify(message);
+// A voice session runs from the first mic tap until the message is sent. While it is
+// on, the bar above the box offers Pause/Resume and Send, so the speaker can stop,
+// read or edit what was heard, carry on talking, and send only when it is complete.
+let voiceSession = 'off';
+function voiceBar(state) {
+  voiceSession = state;
+  $('#voice-bar').classList.toggle('hidden', state === 'off'); $('#voice-bar').dataset.state = state;
+  $('#voice-state').textContent = state === 'listening' ? 'Listening…' : 'Paused. Check or edit the text, then resume or send.';
+  $('#voice-pause').setAttribute('aria-pressed', String(state === 'paused'));
+  $('#voice-pause').querySelector('span').textContent = state === 'paused' ? 'Resume' : 'Pause';
+  $('#voice-pause').title = state === 'paused' ? 'Keep talking' : 'Pause listening';
+}
+function pauseListening() {
+  if (stopListening) { stopListening(); stopListening = null; }
+  micState('idle'); voiceBar('paused'); notify(''); composer.focus();
+}
+function endVoice() {
+  if (stopListening) { stopListening(); stopListening = null; }
+  if ($('#mic').dataset.state === 'listening') micState('idle');
+  voiceBar('off');
+}
+function startListening() {
+  stopSpeaking();
+  // Resuming adds to whatever is in the box now, including anything typed while paused.
+  const before = composer.value.trim();
+  micState('listening'); voiceBar('listening'); notify('');
+  try {
+    stopListening = listen({
+      onText: text => { composer.value = (before ? before + ' ' : '') + text; composer.oninput(); if (text) spokenDraft = true; },
+      onIdle: () => { stopListening = null; micState('idle'); voiceBar('paused'); notify('Paused after a long silence.'); },
+      onError: message => { stopListening = null; micState('idle'); voiceBar('off'); notify(message); },
+    });
+  } catch {
+    stopListening = null; micState('idle'); voiceBar('off'); notify('Microphone is unavailable. Check browser permissions and try again.');
+  }
 }
 // Every way of sending goes through here, so a spoken draft is handled the same way.
 async function submit() {
+  if ($('#send').disabled) { if (voiceSession !== 'off' && !busy) notify('Say or type something first.'); return; }
   const spoken = spokenDraft && !pending.length;
   const action = spoken ? command(composer.value) : null;
-  if (action) { pauseListening(''); spokenDraft = false; composer.value = ''; composer.oninput(); runCommand(action); return; }
+  endVoice();
+  if (action) { spokenDraft = false; composer.value = ''; composer.oninput(); runCommand(action); return; }
   if (spoken) stopSpeaking();
   const reply = await send();
   if (reply) { spokenDraft = false; if (spoken) answerAloud(reply); }
@@ -301,20 +335,10 @@ async function submit() {
 $('#mic').classList.remove('hidden');
 $('#mic').onclick = () => {
   if (speaking() || $('#mic').dataset.state === 'speaking') { stopSpeaking(); micState('idle'); return; }
-  if (stopListening) { pauseListening('Paused. Tap the mic to keep talking, or press Enter to send.'); composer.focus(); return; }
-  // Resuming adds to whatever is in the box now, including anything typed while paused.
-  const before = composer.value.trim();
-  micState('listening'); notify('Listening. Tap the mic to pause, or press Enter to send.');
-  try {
-    stopListening = listen({
-      onText: text => { composer.value = (before ? before + ' ' : '') + text; composer.oninput(); if (text) spokenDraft = true; },
-      onIdle: () => { stopListening = null; micState('idle'); notify('Paused after a long silence. Tap the mic to keep talking, or press Enter to send.'); },
-      onError: message => { stopListening = null; micState('idle'); notify(message); },
-    });
-  } catch {
-    stopListening = null; micState('idle'); notify('Microphone is unavailable. Check browser permissions and try again.');
-  }
+  if (voiceSession === 'listening') pauseListening(); else startListening();
 };
+$('#voice-pause').onclick = () => { if (voiceSession === 'listening') pauseListening(); else startListening(); };
+$('#voice-done').onclick = () => void submit();
 composer.oninput = () => { if (!composer.value.trim()) spokenDraft = false; composer.style.height = 'auto'; composer.style.height = Math.min(composer.scrollHeight, 220) + 'px'; controls(); };
 composer.onkeydown = event => { if (preferences.enter && event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void submit(); } };
 composer.onpaste = event => { if (event.clipboardData.files.length) { event.preventDefault(); void addFiles([...event.clipboardData.files]); } };

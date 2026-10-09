@@ -13,8 +13,9 @@ Web results have citations; unavailable search results produce an explicit notic
 
 Voice chat uses the browser's own speech recognition and speech output, so it
 needs no key and adds no server calls. The mic types what you say and keeps
-listening through pauses; tap it again to pause, then type or tap to add more.
-Nothing is sent until Enter or the send button, and the answer to a spoken
+listening through pauses. While voice is on, a bar above the box offers Pause/
+Resume (stop, check or edit the text, then carry on) and Send. Nothing is sent
+until Send, Enter or the send arrow, and the answer to a spoken
 message is read aloud (tap the mic to stop it). After about three silent
 recognition sessions the mic pauses itself. Sending "new chat", "turn web
 on/off", "open settings", "read that again" or "stop" by voice runs that action
