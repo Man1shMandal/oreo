@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10-09 — Use browser-native voice APIs
+Voice input and read-aloud use the browser's speech recognition and speech
+synthesis APIs. Oreo adds no speech service, API key, or voice-specific backend
+route. Support varies by browser, so the mic stays hidden when recognition is
+unavailable.
+
+## 2026-10-09 — Keep Oreo Code access on the local Oreo server
+Code editing and command execution belong to the owner-only local browser app,
+where Oreo has a real project filesystem. The hosted multi-user service must not
+get machine or shell access. The local server treats its launch directory as
+the workspace, rejects file paths that resolve outside it, and asks before each
+file write, move, deletion, or shell command. Shell commands remain an explicit
+user-approved capability because a project-local working directory alone is not
+a sandbox. `--workspace` selects a project without changing the server's CWD.
+
 ## 2026-10-07 — Sign-in grants hosted chat access
 The user removed the manual approval model. Every verified signed-in account can
 chat immediately, subject to the existing daily budget. There is no admin account
