@@ -2,13 +2,14 @@
 
 ## 2026-10-09 — Refined animated character
 
+Inspected branch `worktree-web-ui` at `b5d4d00`.
 Replaced the small dot face with a shared custom element: glossy blue eyes,
 subtle lashes and lids, and a small smile, based on the user’s reference. It
 blinks and glances at rest, responds to typing and active work, and briefly
 celebrates completed replies. The local app shows it in its mobile header; the
 hosted app shows it in desktop, mobile, and sign-in headers. Reduced-motion
 preferences are respected. Added the module to both apps’ static routes and the
-hosted offline shell.
+hosted offline shell. Released as `f59d838` to `origin/main`.
 
 Validation: browser preview in the local app showed the new eye design in the
 desktop sidebar. All 71 Python tests and 5 Node tests pass; JS syntax, Python
