@@ -39,15 +39,10 @@ main { background: #000; }
 .topbar strong { color: #e7e7e9; font-size: 13px; }
 .top-leading { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
 #chat-title { font-weight: 550; }
-.oreo-character { display: inline-grid; flex: none; width: 25px; height: 22px; place-items: center; }
-.mobile-character { display: none; }
-.oreo-character svg { display: block; width: 22px; height: 19px; overflow: visible; transform-origin: center; animation: oreo-idle 3.6s ease-in-out infinite; }
-.oreo-eye-dot { fill: #f2f2f4; transform-box: fill-box; transform-origin: center; animation: oreo-dot-blink 8.2s ease-in-out infinite; }
-.oreo-smile { fill: none; stroke: #f2f2f4; stroke-width: 1.5; stroke-linecap: round; }
-.oreo-character.attentive svg { animation-duration: 3s; }
-.oreo-character.working svg { animation-duration: 2.2s; }
-@keyframes oreo-dot-blink { 0%, 47%, 50%, 100% { transform: scaleY(1); } 48.5%, 49% { transform: scaleY(.12); } }
-@keyframes oreo-idle { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-.7px) rotate(.7deg); } }
+oreo-mascot.oreo-character { display: inline-grid; flex: none; width: 52px; height: 38px; place-items: center; }
+oreo-mascot.desktop-character { margin: -5px 0 -5px 1px; }
+oreo-mascot.mobile-character { display: none; }
+oreo-mascot.signin-character { width: 62px; height: 44px; }
 .top-actions { gap: 6px; }
 #model { max-width: 180px; padding: 7px 25px 7px 11px; border: 0; appearance: none; background: transparent; color: #d0d0d4; font-size: 12px; cursor: pointer; }
 #model:hover, #model:focus { color: #fff; }
@@ -148,10 +143,8 @@ textarea:focus-visible { outline: 0; }
   main { height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
   .topbar { height: 52px; padding: 0 10px; }
   .mobile-head { display: flex; align-items: center; gap: 7px; color: #f2f2f4 !important; font-size: 14px !important; }
-  .mobile-character { display: inline-grid; }
+  oreo-mascot.mobile-character { display: inline-grid; }
   .top-leading { gap: 7px; }
-  .oreo-character { width: 22px; height: 20px; }
-  .oreo-character svg { width: 20px; height: 17px; }
   .mobile-menu { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; }
   .topbar #chat-title { display: none; }
   .top-actions { gap: 1px; }
@@ -184,8 +177,7 @@ textarea:focus-visible { outline: 0; }
 }
 
 @media (max-width: 380px) {
-  .mobile-head span { display: none; }
-  #model { max-width: 120px; }
+  #model { max-width: 105px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -88,6 +88,7 @@ class InstallableAppTests(unittest.TestCase):
 
     def test_app_files_are_served_with_their_types(self):
         for path, kind in (('/manifest.webmanifest', 'application/manifest+json'), ('/sw.js', 'text/javascript; charset=utf-8'),
+                           ('/mascot.js', 'text/javascript; charset=utf-8'),
                            ('/theme.css', 'text/css; charset=utf-8'),
                            ('/icon-192.png', 'image/png'), ('/icon-512.png', 'image/png'),
                            ('/icon-maskable-512.png', 'image/png'), ('/apple-touch-icon.png', 'image/png')):
@@ -111,16 +112,27 @@ class InstallableAppTests(unittest.TestCase):
         page = (root / 'public' / 'index.html').read_text()
         script = (root / 'public' / 'chat.js').read_text()
         styles = (root / 'public' / 'theme.css').read_text()
+        local = (root / 'oreo' / 'web.html').read_text()
         self.assertIn('class="oreo-character desktop-character" aria-hidden="true"', page)
         self.assertIn('class="oreo-character mobile-character" aria-hidden="true"', page)
-        self.assertEqual(page.count('class="oreo-eye-dot"'), 4)
-        self.assertEqual(page.count('class="oreo-smile"'), 2)
+        self.assertIn('class="oreo-character signin-character" aria-hidden="true"', page)
+        self.assertIn('import \'./mascot.js\';', script)
+        mascot = (root / 'public' / 'mascot.js').read_text()
+        self.assertIn("customElements.define('oreo-mascot'", mascot)
+        self.assertIn('class="iris"', mascot)
+        self.assertIn('class="smile"', mascot)
+        self.assertIn('prefers-reduced-motion: reduce', mascot)
         self.assertIn("document.querySelectorAll('.oreo-character')", script)
         self.assertIn("eye.classList.toggle('working', active)", script)
         self.assertIn("eye.classList.toggle('attentive', !active && ready && Boolean(composer.value.trim()))", script)
+        self.assertIn('celebrateCharacter();', script)
+        self.assertNotIn('.mobile-head span { display: none; }', styles)
         self.assertIn('@media (prefers-reduced-motion: reduce)', styles)
-        self.assertIn('@keyframes oreo-dot-blink', styles)
-        self.assertIn('@keyframes oreo-idle', styles)
+        self.assertIn('oreo-mascot.mobile-character { display: inline-grid; }', styles)
+        self.assertIn('class="local-mobile-brand"', local)
+        self.assertIn('.local-mobile-brand { display: flex; }', local)
+        self.assertIn('import "/mascot.js";', local)
+        self.assertIn('class="oreo-character" aria-hidden="true"', local)
 
     def test_manifest_icons_exist(self):
         _, body = self.get('/manifest.webmanifest')

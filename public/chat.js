@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { markdown, typesetMath } from './markdown.js';
+import './mascot.js';
 import { preferences, loadPreferences, installSettings } from './preferences.js';
 import { voiceSupported, listen, command, speak, stopSpeaking, speaking } from './voice.js';
 
@@ -11,6 +12,12 @@ const previewUrls = new Set();
 let pending = [], busy = false, loading = false, reading = false, ready = false, web = false;
 const welcome = '<div class="welcome"><h1>What can I help you with?</h1><p>Ask a question or start with a file.</p></div>';
 const notify = text => { $('#status').textContent = text; $('#auth-status').textContent = text; };
+let celebrationTimer;
+const celebrateCharacter = () => {
+  clearTimeout(celebrationTimer);
+  for (const character of document.querySelectorAll('.oreo-character')) character.classList.add('celebrate');
+  celebrationTimer = setTimeout(() => document.querySelectorAll('.oreo-character').forEach(character => character.classList.remove('celebrate')), 1900);
+};
 const controls = () => {
   const blocked = busy || loading || reading || !ready;
   const active = busy || loading || reading;
@@ -230,6 +237,7 @@ async function send() {
     clearTimeout(paint); reply = done.reply; paintReply();
     replyBody.classList.remove('streaming-plain'); replyBody.innerHTML = markdown(reply, done.sources); typesetMath(replyBody);
     sourceLinks(replyEl, done.sources);
+    celebrateCharacter();
     if (done.model !== $('#model').value) { const note = document.createElement('div'); note.className = 'meta'; note.textContent = 'Used a vision model for this image.'; replyEl.append(note); }
     chatId = done.conversation_id; rows.push(outgoing, { role: 'assistant', content: { text: reply, sources: done.sources } });
     pending = []; tray(); composer.value = ''; composer.style.height = 'auto';

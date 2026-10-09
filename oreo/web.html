@@ -32,6 +32,9 @@
           border-right: 1px solid var(--line); }
   .brand { display: flex; align-items: center; gap: 8px; padding: 18px 18px 12px; font-weight: 700;
            letter-spacing: .02em; }
+  oreo-mascot.oreo-character { display: inline-grid; flex: none; width: 52px; height: 38px; place-items: center; }
+  oreo-mascot.desktop-character { margin: -4px 0 -4px 1px; }
+  .local-mobile-brand { display: none; align-items: center; gap: 6px; font-weight: 650; letter-spacing: -.03em; white-space: nowrap; }
   .brand i { width: 14px; height: 14px; border-radius: 50%; background: var(--ink);
              box-shadow: inset 0 0 0 3px var(--bg); }
   #new { margin: 0 12px 10px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px;
@@ -175,20 +178,20 @@
                       border-radius: 8px; padding: 12px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
   .agent-activity { color: var(--muted); font-size: 12px; margin-top: 8px; }
 
-  @media (max-width: 720px) { aside { display: none; } }
+  @media (max-width: 720px) { aside { display: none; } header { justify-content: space-between; min-height: 58px; padding: 9px 14px; } .local-mobile-brand { display: flex; } header select { max-width: 48%; } }
   .brand{letter-spacing:-.035em;font-weight:650}.brand img{display:block}
 </style>
 </head>
 <body>
 <aside>
-  <div class="brand"><img src="/oreo.svg" alt="" width="24" height="24">oreo</div>
+  <div class="brand"><span>Oreo</span><oreo-mascot class="oreo-character desktop-character" aria-hidden="true"></oreo-mascot></div>
   <button id="new">+ New chat</button>
   <nav id="chats"></nav>
   <div class="side-foot"><button id="who" title="Not you? Change name"></button><span id="owner-only" hidden> · <button id="open-settings">Settings</button></span></div>
 </aside>
 
 <main>
-  <header><select id="model" title="Model for this chat"></select></header>
+  <header><div class="local-mobile-brand">Oreo<oreo-mascot class="oreo-character" aria-hidden="true"></oreo-mascot></div><select id="model" title="Model for this chat"></select></header>
   <div id="log"><div class="col" id="msgs"></div></div>
   <form class="compose col" id="form">
     <div class="box">
@@ -250,6 +253,7 @@
 
 <script type="module">
 import { markdown, typesetMath } from "/markdown.js";
+import "/mascot.js";
 const $ = s => document.querySelector(s);
 const esc = value => String(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 let state = null, chatId = null, controller = null;
@@ -416,6 +420,10 @@ function sourcesHtml(list) {
 function setBusy(busy) {
   $("#send").textContent = busy ? "■" : "↑";
   $("#send").title = busy ? "Stop" : "Send (Enter)";
+  for (const character of document.querySelectorAll(".oreo-character")) {
+    character.classList.toggle("working", busy);
+    character.classList.toggle("attentive", !busy && Boolean($("#input").value.trim()));
+  }
   updateSend();
 }
 const updateSend = () => { $("#send").disabled = !controller && !$("#input").value.trim() && !pending.length; };
@@ -526,6 +534,8 @@ async function send() {
         } else if (ev.done) {
           md.classList.remove("streaming-plain"); md.innerHTML = markdown(reply, sources); typesetMath(md);
           if (sources.length) el.insertAdjacentHTML("beforeend", sourcesHtml(sources));
+          for (const character of document.querySelectorAll(".oreo-character")) character.classList.add("celebrate");
+          setTimeout(() => document.querySelectorAll(".oreo-character").forEach(character => character.classList.remove("celebrate")), 1900);
           meta(ev.done);
         } else if (ev.error) {
           throw new Error(ev.error);
@@ -594,7 +604,7 @@ async function loadUsage() {
 
 // ---------- wiring
 
-function grow() { const t = $("#input"); t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; updateSend(); }
+function grow() { const t = $("#input"); t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; updateSend(); for (const character of document.querySelectorAll(".oreo-character")) character.classList.toggle("attentive", Boolean(t.value.trim()) && !controller); }
 
 $("#input").addEventListener("input", grow);
 $("#input").addEventListener("keydown", e => {

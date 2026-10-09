@@ -1,5 +1,63 @@
 # Oreo handoff state
 
+## 2026-10-09 — Refined animated character
+
+Replaced the small dot face with a shared custom element: glossy blue eyes,
+subtle lashes and lids, and a small smile, based on the user’s reference. It
+blinks and glances at rest, responds to typing and active work, and briefly
+celebrates completed replies. The local app shows it in its mobile header; the
+hosted app shows it in desktop, mobile, and sign-in headers. Reduced-motion
+preferences are respected. Added the module to both apps’ static routes and the
+hosted offline shell.
+
+Validation: browser preview in the local app showed the new eye design in the
+desktop sidebar. All 71 Python tests and 5 Node tests pass; JS syntax, Python
+compilation, and `git diff --check` pass. Source checks confirm the mobile
+mascot remains visible at the small-screen breakpoint. No model calls or
+external accounts were used.
+
+## 2026-10-09 — Shared text formatting
+
+Inspected branch `worktree-web-ui` at `02b10a2`, synced with `origin/main`.
+The hosted and local chat now share `public/markdown.js`. It handles headings,
+paragraphs, nested and task lists, tables, quotes, links, code spans/fences,
+strikethrough, inline/display math, and source-linked citations. KaTeX is loaded
+with pinned version and SRI; the service worker can cache its CDN assets after
+they load. Raw HTML stays escaped and citations only link to HTTP(S) sources.
+The local web server now serves the shared module. Both views wrap long content,
+scroll wide equations/tables, and keep code readable on mobile. Local streamed
+replies append text while generating and format once when complete.
+
+Validation: all 71 Python tests and 5 Node UI/Markdown tests pass; public JS and
+the extracted local module pass syntax checks, Python compileall and
+`git diff --check` pass. Browser rendering with a signed-in account and an
+offline first-load of KaTeX were not exercised. Released as `11e7b8b` to
+`origin/main`, with a service-worker comment cleanup in `b5d4d00`. GitHub run
+`37889369304` passed. Production health returns ok, and the page, renderer,
+styles and updated service worker serve the new release. Preserve existing
+unrelated workspace changes.
+
+## 2026-10-09 — Full system smoke check
+
+Inspected `worktree-web-ui` at `02b10a2`, synced with `origin/main`. The full
+Python suite passes (71 tests), all four Node chat UI tests pass, JavaScript
+syntax checks pass for the hosted modules and service worker, Python compileall
+passes, and `git diff --check` is clean. GitHub verification run
+`37886810161` passed.
+
+Production `/api/health`, `/api/config`, homepage, chat/voice scripts, theme,
+manifest, service worker, wordmark, and install icons return 200 and contain the
+current release. Unauthenticated conversation/profile reads and a valid-shaped
+chat request are rejected with 401. The local loopback server returns owner
+state and its workspace, serves the Code control, and rejects an untrusted Host
+with 403. Oreo Code list/context reads and an outside-workspace path rejection
+also pass. The local server was stopped after the check; no model call was made.
+
+Not covered: a signed-in production session, a real ABB model/search request,
+browser microphone permission or physical speech recognition, and mobile/PWA
+install interaction. Existing unrelated `AGENTS.md`, `.github/copilot-instructions.md`,
+`.venv`, and `GEMINI.md` workspace changes remain untouched.
+
 ## 2026-10-09 — Search and voice UI
 
 Inspected branch `worktree-web-ui` at `43d9e20`. The hosted composer now shows
