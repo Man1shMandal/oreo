@@ -3,8 +3,14 @@
 ## 2026-10-09 — Use browser-native voice APIs
 Voice input and read-aloud use the browser's speech recognition and speech
 synthesis APIs. Oreo adds no speech service, API key, or voice-specific backend
-route. Support varies by browser, so the mic stays hidden when recognition is
-unavailable.
+route. Support varies by browser, so the mic stays visible but disabled with an
+explanation when recognition is unavailable.
+
+## 2026-10-09 — Make chat controls state their effect
+Web search shows a readable On/Off label and matching pressed state. The
+selection stays active for messages in the current chat and a new chat starts
+from the saved preference. Cancelling voice input must discard any late
+recognition result instead of sending it.
 
 ## 2026-10-09 — Keep Oreo Code access on the local Oreo server
 Code editing and command execution belong to the owner-only local browser app,

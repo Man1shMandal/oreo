@@ -20,7 +20,8 @@ const controls = () => {
   }
   $('#send').disabled = blocked || (!composer.value.trim() && !pending.length);
   composer.disabled = busy || loading || !ready;
-  for (const id of ['attach', 'web', 'model', 'new-chat', 'open-settings', 'mic']) $('#' + id).disabled = blocked;
+  for (const id of ['attach', 'web', 'model', 'new-chat', 'open-settings']) $('#' + id).disabled = blocked;
+  $('#mic').disabled = blocked || !voiceAvailable;
   $('#sign-out').disabled = busy;
   for (const button of $('#history').querySelectorAll('button')) button.disabled = busy || loading;
 };
@@ -92,12 +93,20 @@ function renderSidebar() {
   }
   $('#chat-title').textContent = conversations.find(row => row.id === chatId)?.title || 'New chat'; controls();
 }
+function syncWebButton() {
+  const button = $('#web');
+  button.classList.toggle('on', web);
+  button.setAttribute('aria-pressed', String(web));
+  button.setAttribute('aria-label', `Web search ${web ? 'on' : 'off'}`);
+  button.title = `Web search is ${web ? 'on' : 'off'}. Click to turn it ${web ? 'off' : 'on'}.`;
+  button.querySelector('span').textContent = `Web: ${web ? 'On' : 'Off'}`;
+}
 async function account(expected = epoch) {
   const historyData = await api('/api/conversations'); if (expected !== epoch) return;
   ready = true; conversations = historyData.conversations; renderSidebar();
 }
 function clearFiles() { for (const file of pending) if (file.preview) URL.revokeObjectURL(file.preview); pending = []; tray(); }
-function resetDraft() { for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); }
+function resetDraft() { for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; syncWebButton(); }
 async function deleteConversation(row) {
   if (busy || loading || reading || !confirm('Delete this chat? This cannot be undone.')) return;
   const expected = epoch; loading = true; controls(); notify('Deleting chat…');
@@ -169,6 +178,7 @@ function tray() {
 }
 async function send() {
   if ($('#send').disabled) return;
+  if (stopListening) { stopListening(); stopListening = null; micState('idle'); }
   const expected = epoch, text = composer.value.trim(), files = [...pending];
   const outgoing = { role: 'user', content: { text, files } };
   busy = true; controls(); tray(); notify(files.length ? 'Reading files…' : web ? 'Searching the web…' : 'Thinking…');
@@ -224,7 +234,6 @@ async function send() {
     chatId = done.conversation_id; rows.push(outgoing, { role: 'assistant', content: { text: reply, sources: done.sources } });
     pending = []; tray(); composer.value = ''; composer.style.height = 'auto';
     // Preview URLs stay alive for this open chat; history uses saved file names.
-    web = preferences.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web));
     const saved = conversations.find(row => row.id === chatId) || { id: chatId, title: (text || files.map(file => file.name).join(', ') || 'New chat').slice(0, 80) };
     conversations = [{ ...saved, updated_at: new Date().toISOString() }, ...conversations.filter(row => row.id !== chatId)].slice(0, 100);
     renderSidebar();
@@ -245,10 +254,14 @@ $('#composer').onsubmit = event => { event.preventDefault(); void send(); };
 $('#new-chat').onclick = newChat;
 $('#attach').onclick = () => $('#pick').click();
 $('#pick').onchange = event => { void addFiles([...event.target.files]); event.target.value = ''; };
-$('#web').setAttribute('aria-pressed', 'false');
-$('#web').onclick = () => { web = !web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); };
+$('#web').onclick = () => { web = !web; syncWebButton(); };
 // Voice: the mic sends what you say, runs a few spoken commands, and reads the answer aloud.
 let stopListening = null;
+const voiceAvailable = voiceSupported && globalThis.isSecureContext !== false;
+if (!voiceAvailable) {
+  $('#mic').title = 'Voice input is not available here. Use a secure page in a recent Chrome, Edge, or Safari.';
+  $('#mic').setAttribute('aria-label', $('#mic').title);
+}
 const micState = state => {
   $('#mic').dataset.state = state; $('#mic').classList.toggle('on', state !== 'idle'); $('#mic').setAttribute('aria-pressed', String(state !== 'idle'));
   $('#mic').title = { idle: 'Talk to Oreo', listening: 'Listening. Tap to cancel.', speaking: 'Speaking. Tap to stop.' }[state]; $('#mic').setAttribute('aria-label', $('#mic').title);
@@ -269,7 +282,7 @@ async function voiceTurn(text, before) {
   const reply = await send();
   if (reply) answerAloud(reply);
 }
-$('#mic').classList.toggle('hidden', !voiceSupported);
+$('#mic').classList.remove('hidden');
 let draftBeforeVoice = '';
 $('#mic').onclick = () => {
   if (speaking() || $('#mic').dataset.state === 'speaking') { stopSpeaking(); micState('idle'); return; }
@@ -341,7 +354,7 @@ try {
   $('#model').value = defaultModel;
   for (const [label, id] of Object.entries(config.models)) $('#s-model').add(new Option(config.modelLabels?.[label] || label, id));
   installSettings((value, saved) => {
-    $('#model').value = value.model; web = value.web; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web));
+    $('#model').value = value.model; web = value.web; syncWebButton();
     $('#send-hint').textContent = value.enter ? 'Enter to send · Shift + Enter for a new line' : 'Click the arrow to send · Enter for a new line';
     notify(saved ? 'Settings saved.' : 'Settings apply to this session. This browser could not save them.');
   });

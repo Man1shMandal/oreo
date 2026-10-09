@@ -1,5 +1,29 @@
 # Oreo handoff state
 
+## 2026-10-09 — Search and voice UI
+
+Inspected branch `worktree-web-ui` at `43d9e20`. The hosted composer now shows
+Web: On or Web: Off with a high-contrast active state, matching accessible
+pressed state and tooltip. Search stays enabled for later messages in the same
+chat; a new chat starts from the saved preference. The local browser UI uses
+the same explicit state label. The mic remains visible but is disabled with a
+browser/security explanation when speech recognition is unavailable. Manual
+sends cancel active listening without sending a second message; canceled
+recognition ignores late results. Permission, microphone, network, and language
+errors are described separately, and canceled older read-aloud events cannot
+reset a newer speaking state.
+
+Oreo Code is owner-only in the local browser app. Run
+`bin/oreo web --workspace /path/to/project` from the active checkout, open
+`http://localhost` (or the printed fallback port), and select **Oreo Code** next
+to the composer controls. The hosted service deliberately cannot read or modify
+the Mac's local project files.
+
+Validation: all 71 Python tests and 4 Node chat UI tests pass; hosted and local
+JavaScript syntax checks, Python compilation, and `git diff --check` pass. Real
+browser microphone permission/recognition was not exercised. No deployment was
+verified in this task.
+
 ## 2026-10-09 — Voice chat and Oreo Code
 
 Inspected `worktree-web-ui` at `b7bfc0e`. Integrated Prashant's `voice-chat`
