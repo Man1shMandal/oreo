@@ -15,8 +15,9 @@ Voice chat uses the browser's own speech recognition and speech output, so it
 needs no key and adds no server calls. The mic types what you say and keeps
 listening through pauses. While voice is on, a bar above the box offers Pause/
 Resume (stop, check or edit the text, then carry on) and Send. Nothing is sent
-until Send, Enter or the send arrow, and the answer to a spoken
-message is read aloud (tap the mic to stop it). After about three silent
+until Send, Enter or the send arrow. Answers are never read aloud on their
+own: each finished answer has Listen (read it aloud, tap again to stop) and Copy
+(copy the answer text). After about three silent
 recognition sessions the mic pauses itself. Sending "new chat", "turn web
 on/off", "open settings", "read that again" or "stop" by voice runs that action
 instead (`public/voice.js`). Firefox has no recognition, so the button is
