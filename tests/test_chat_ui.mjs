@@ -14,13 +14,13 @@ function harness(events) {
   const requests = [];
   const timers = new Map();
   const sandbox = {
-    $, epoch: 1, chatId: null, pending: [], preferences: { web: false }, web: false,
+    $, epoch: 1, chatId: null, pending: [], preferences: { web: false }, web: false, stopListening: null,
     rows: [], conversations: [], busy: false, ready: true,
     composer: { value: 'Remember Cedar', style: {}, focus() {}, dispatchEvent() {} },
     timeline: { querySelector: () => null, append() {} },
     stage: { scrollHeight: 100, scrollTop: 0, clientHeight: 100 },
     document: { createTextNode() { return { appendData(value) { streamed += value; } }; } },
-    controls() {}, tray() {}, notify() {}, message: node, markdown: text => text,
+    controls() {}, tray() {}, notify() {}, micState() {}, message: node, markdown: text => text,
     sourceLinks() {}, renderSidebar() {}, render() {}, Event: class {},
     TextDecoder, Uint8Array, Date,
     setTimeout(callback) { const id = timers.size + 1; timers.set(id, callback); return id; },
@@ -79,4 +79,30 @@ test('account initialization uses one authenticated history request', async () =
   await scope.account();
   assert.deepEqual(requests, ['/api/conversations']);
   assert.equal(scope.ready, true);
+});
+
+test('web search clearly reports its current state to sighted and assistive users', () => {
+  const classes = new Set();
+  const attrs = {};
+  const label = { textContent: '' };
+  const button = {
+    classList: { toggle(name, enabled) { if (enabled) classes.add(name); else classes.delete(name); } },
+    setAttribute(name, value) { attrs[name] = value; },
+    querySelector() { return label; },
+  };
+  const scope = { web: false, $(selector) { assert.equal(selector, '#web'); return button; } };
+  vm.createContext(scope);
+  const start = source.indexOf('function syncWebButton()');
+  const end = source.indexOf('async function deleteConversation(', start);
+  vm.runInContext(source.slice(start, end), scope);
+  scope.syncWebButton();
+  assert.equal(label.textContent, 'Web: Off');
+  assert.equal(attrs['aria-pressed'], 'false');
+  assert.equal(attrs['aria-label'], 'Web search off');
+  scope.web = true;
+  scope.syncWebButton();
+  assert.equal(label.textContent, 'Web: On');
+  assert.equal(attrs['aria-pressed'], 'true');
+  assert.equal(attrs['aria-label'], 'Web search on');
+  assert.equal(classes.has('on'), true);
 });

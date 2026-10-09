@@ -152,14 +152,17 @@ class InstallableAppTests(unittest.TestCase):
         self.assertIn('Add to Home Screen', page.decode())
         self.assertIn("if (ios && !installed) $('#install').classList.remove('hidden');", script.decode())
 
-    def test_voice_module_is_served_and_mic_hides_without_support(self):
+    def test_voice_module_is_served_and_unavailable_mic_stays_explained(self):
         headers, body = self.get('/voice.js')
         self.assertEqual(headers['Content-Type'], 'text/javascript; charset=utf-8')
         self.assertIn('export function listen', body.decode())
         _, page = self.get('/')
-        self.assertIn('<button id="mic" type="button" class="mic hidden"', page.decode())
+        self.assertIn('<button id="mic" type="button" class="mic"', page.decode())
+        self.assertIn('Web: Off', page.decode())
         _, script = self.get('/chat.js')
-        self.assertIn("$('#mic').classList.toggle('hidden', !voiceSupported);", script.decode())
+        self.assertIn('const voiceAvailable = voiceSupported && globalThis.isSecureContext !== false;', script.decode())
+        self.assertIn("$('#mic').disabled = blocked || !voiceAvailable;", script.decode())
+        self.assertIn('function syncWebButton()', script.decode())
 
 
 @unittest.skipUnless(shutil.which('node'), 'Node is needed to run the voice module')
@@ -176,6 +179,32 @@ class VoiceCommandTests(unittest.TestCase):
         result = subprocess.run(['node', '--input-type=module', '-e', script, json.dumps(list(cases))],
                                 capture_output=True, text=True, cwd=Path(__file__).resolve().parent.parent, check=True)
         self.assertEqual(json.loads(result.stdout), cases)
+
+    def test_cancelled_listening_discards_late_results_and_reports_mic_errors(self):
+        script = r"""
+          const { readFileSync } = await import('node:fs');
+          const source = readFileSync('./public/voice.js', 'utf8');
+          Object.defineProperty(globalThis, 'navigator', { value: { language: 'en-US' }, configurable: true });
+          globalThis.SpeechRecognition = class {
+            constructor() { globalThis.recognition = this; }
+            start() {}
+            abort() { this.aborted = true; }
+          };
+          const { listen } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+          let transcript = '', completed = 0, error = '';
+          const cancel = listen({ onText: value => transcript = value, onDone: () => completed++, onError: value => error = value });
+          cancel();
+          recognition.onresult({ results: [{ 0: { transcript: 'late words' } }] });
+          recognition.onend();
+          if (transcript || completed) throw new Error('cancelled recognition delivered a late result');
+          listen({ onText() {}, onDone() {}, onError: value => error = value });
+          recognition.onerror({ error: 'audio-capture' });
+          recognition.onend();
+          if (!error.includes('No microphone')) throw new Error('microphone failure was not explained');
+        """
+        result = subprocess.run(['node', '--input-type=module', '-e', script], capture_output=True,
+                                text=True, cwd=Path(__file__).resolve().parent.parent)
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == '__main__':

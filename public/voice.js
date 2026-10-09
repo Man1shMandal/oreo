@@ -27,19 +27,28 @@ export function listen({ onText, onDone, onError }) {
   recognition.continuous = false;
   let text = '', failed = false, cancelled = false;
   recognition.onresult = event => {
+    if (cancelled || failed) return;
     text = [...event.results].map(result => result[0].transcript).join('').trim();
     onText(text);
   };
   recognition.onerror = event => {
-    if (event.error === 'aborted' || event.error === 'no-speech') return;
+    if (cancelled || failed) return;
+    if (event.error === 'aborted') return;
+    if (event.error === 'no-speech') return;
     failed = true;
-    onError(event.error === 'not-allowed' || event.error === 'service-not-allowed'
-      ? 'Allow microphone access for Oreo to use voice.' : 'Could not hear that. Tap the mic and try again.');
+    const messages = {
+      'not-allowed': 'Allow microphone access for Oreo in your browser settings, then try again.',
+      'service-not-allowed': 'Allow microphone access for Oreo in your browser settings, then try again.',
+      'audio-capture': 'No microphone is available. Connect one and try again.',
+      network: 'Voice recognition could not connect. Check your connection and try again.',
+      'language-not-supported': 'Voice input does not support your browser language.',
+    };
+    onError(messages[event.error] || 'Could not hear that. Check your microphone and try again.');
   };
   // Cancelling still fires onend; it must not send the half-finished sentence.
   recognition.onend = () => { if (!failed && !cancelled) onDone(text); };
   recognition.start();
-  return () => { cancelled = true; recognition.abort(); };
+  return () => { cancelled = true; try { recognition.abort(); } catch {} };
 }
 
 // Markdown reads badly aloud, so speak the plain words and skip code blocks.
@@ -49,14 +58,18 @@ function plain(markdown) {
     .replace(/^\s*[-+]\s+/gm, '').replace(/\s+/g, ' ').trim();
 }
 
+let speechGeneration = 0;
 export function speak(markdown, onEnd = () => {}) {
-  if (!globalThis.speechSynthesis) return onEnd();
-  speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(plain(markdown));
-  utterance.lang = navigator.language || 'en-US';
-  utterance.onend = utterance.onerror = () => onEnd();
-  speechSynthesis.speak(utterance);
+  const generation = ++speechGeneration;
+  if (!globalThis.speechSynthesis || typeof globalThis.SpeechSynthesisUtterance !== 'function') return onEnd();
+  try {
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(plain(markdown));
+    utterance.lang = navigator.language || 'en-US';
+    utterance.onend = utterance.onerror = () => { if (generation === speechGeneration) onEnd(); };
+    speechSynthesis.speak(utterance);
+  } catch { onEnd(); }
 }
 
-export function stopSpeaking() { globalThis.speechSynthesis?.cancel(); }
+export function stopSpeaking() { speechGeneration++; try { globalThis.speechSynthesis?.cancel(); } catch {} }
 export const speaking = () => !!globalThis.speechSynthesis?.speaking;
