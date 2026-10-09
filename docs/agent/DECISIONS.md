@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-10-09 — Use an eye-first Oreo character
+Use a shared custom element for the hosted and local apps. The character is a
+compact pair of glossy blue eyes with refined lids and a small smile, inspired
+by the user’s reference. Keep it visible in desktop and phone headers, with
+quiet blinking and glances at rest, focused movement while working, and a brief
+celebration after replies. Respect reduced-motion settings.
+
 ## 2026-10-09 — Share text rendering across Oreo views
 Use one escaped Markdown renderer for the hosted and local chat apps so fixes
 to math, citations, lists, tables, links and code behave the same. Use pinned

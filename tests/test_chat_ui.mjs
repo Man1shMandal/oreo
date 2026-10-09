@@ -20,7 +20,7 @@ function harness(events) {
     timeline: { querySelector: () => null, append() {} },
     stage: { scrollHeight: 100, scrollTop: 0, clientHeight: 100 },
     document: { createTextNode() { return { appendData(value) { streamed += value; } }; } },
-    controls() {}, tray() {}, notify() {}, micState() {}, message: node, markdown: text => text, typesetMath() {},
+    controls() {}, tray() {}, notify() {}, micState() {}, celebrateCharacter() {}, message: node, markdown: text => text, typesetMath() {},
     sourceLinks() {}, renderSidebar() {}, render() {}, Event: class {},
     TextDecoder, Uint8Array, Date,
     setTimeout(callback) { const id = timers.size + 1; timers.set(id, callback); return id; },

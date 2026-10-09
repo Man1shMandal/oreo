@@ -26,6 +26,7 @@ from .provider import Provider
 
 PAGE = Path(__file__).with_name("web.html")
 MARKDOWN = PAGE.parents[1] / "public" / "markdown.js"
+MASCOT = PAGE.parents[1] / "public" / "mascot.js"
 PEOPLE = Path.home() / ".oreo" / "people"   # one chat folder per visitor
 CHAT_ID = re.compile(r"^[\w-]+$")
 UPLOAD = re.compile(r"^[0-9a-f]{24}\.(png|jpg|pdf)$")
@@ -143,6 +144,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, PAGE.with_name("logo.svg").read_bytes(), "image/svg+xml")
             if method == "GET" and path == "/markdown.js":
                 return self.send(200, MARKDOWN.read_bytes(), "text/javascript; charset=utf-8")
+            if method == "GET" and path == "/mascot.js":
+                return self.send(200, MASCOT.read_bytes(), "text/javascript; charset=utf-8")
             if parts[0] != "api" or len(parts) < 2:
                 return self.send(404, {"error": "not found"})
             fn = getattr(self, f"{method.lower()}_{parts[1]}", None)
