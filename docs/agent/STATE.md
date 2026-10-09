@@ -20,9 +20,11 @@ to the composer controls. The hosted service deliberately cannot read or modify
 the Mac's local project files.
 
 Validation: all 71 Python tests and 4 Node chat UI tests pass; hosted and local
-JavaScript syntax checks, Python compilation, and `git diff --check` pass. Real
-browser microphone permission/recognition was not exercised. No deployment was
-verified in this task.
+JavaScript syntax checks, Python compilation, and `git diff --check` pass. The
+fixes were pushed in `bcdeed2`; GitHub run `37886720224` passed, production
+`/api/health` returns ok, and the live page, chat script, and voice script serve
+the updated controls. Real browser microphone permission/recognition was not
+exercised.
 
 ## 2026-10-09 — Voice chat and Oreo Code
 
