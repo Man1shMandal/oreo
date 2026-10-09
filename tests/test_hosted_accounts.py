@@ -176,6 +176,18 @@ class InstallableAppTests(unittest.TestCase):
         self.assertIn("$('#mic').disabled = blocked || !voiceAvailable;", script.decode())
         self.assertIn('function syncWebButton()', script.decode())
 
+    def test_voice_bar_offers_pause_and_send(self):
+        _, page = self.get('/')
+        page = page.decode()
+        bar = page[page.index('<div id="voice-bar"'):page.index('<div id="tray">')]
+        self.assertIn('class="voice-bar hidden"', bar)
+        self.assertIn('<button id="voice-pause" type="button"', bar)
+        self.assertIn('<span>Pause</span>', bar)
+        self.assertIn('<button id="voice-done" type="button"', bar)
+        self.assertIn('<span>Send</span>', bar)
+        _, script = self.get('/chat.js')
+        self.assertIn("$('#voice-done').onclick = () => void submit();", script.decode())
+
 
 @unittest.skipUnless(shutil.which('node'), 'Node is needed to run the voice module')
 class VoiceCommandTests(unittest.TestCase):
