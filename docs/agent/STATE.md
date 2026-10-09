@@ -1,5 +1,25 @@
 # Oreo handoff state
 
+## 2026-10-09 — Voice chat and Oreo Code
+
+Inspected `worktree-web-ui` at `b7bfc0e`. Integrated Prashant's `voice-chat`
+commit (`b74a5ff`, original author preserved) and committed the local Oreo Code
+agent (`b7bfc0e`). Hosted voice uses browser speech recognition/synthesis,
+spoken controls, and the updated offline shell. Local Oreo Code reads project
+guidance, inspects Git, searches/reads/edits files, creates/moves/deletes files,
+reads public documentation, and runs commands. Every file mutation and command
+requires review; file tools stay inside the chosen workspace. Voice startup now
+handles unavailable microphone permission without leaving the mic stuck active.
+
+Checks: Python compilation of `oreo/code_agent.py`, `oreo/web.py`, and
+`api/index.py`; Node syntax checks of the local web script, `public/chat.js`, and
+`public/voice.js`; `git show --check`; and `git diff --check` pass. Automated
+tests and microphone/browser behavior were not run. No production deployment
+was performed.
+
+Preserve unrelated modified `AGENTS.md`, untracked
+`.github/copilot-instructions.md`, `.venv` symlink, and `GEMINI.md`.
+
 Updated 2026-10-08. Active checkout:
 `/Users/manishmandal/oreo/.claude/worktrees/web-ui`, branch `worktree-web-ui`.
 Latest application commit `4b7a193` is pushed to `origin/main`. The hosted app is
