@@ -1,5 +1,19 @@
 # Oreo handoff state
 
+## 2026-10-09 — Integrate voice-hold branch
+
+Inspected `origin/main` at `d3c706f` and Prashant's
+`prashantkr102004-ui:voice-hold` at `77a9af3`; the branch was a clean
+fast-forward. Integrated its continuous voice dictation, pause/resume and send
+controls, explicit Listen and Copy answer actions, and updated hosting notes.
+Preserved the upstream commits. Fixed a transcript edge case so words still
+marked interim by the browser survive recognition session restarts.
+
+Validation: all 74 Python tests and 5 Node tests pass; hosted JS syntax checks,
+Python compilation, and `git diff --check` pass. Browser microphone permission
+and real speech recognition were not exercised. No production model calls were
+made. Push is pending this final record.
+
 ## 2026-10-09 — Refined animated character
 
 Inspected branch `worktree-web-ui` at `b5d4d00`.

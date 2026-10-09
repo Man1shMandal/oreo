@@ -34,19 +34,21 @@ export function listen({ onText, onIdle, onError, silentRestarts = 3 }) {
     recognition.lang = navigator.language || 'en-US';
     recognition.interimResults = true;
     recognition.continuous = true;
-    let session = '', spoke = false;
+    let transcript = '', spoke = false;
     recognition.onresult = event => {
       if (stopped || failed) return;
       let final = '', interim = '';
       for (const result of event.results) {
         if (result.isFinal) final += result[0].transcript; else interim += result[0].transcript;
       }
-      session = final; spoke = true;
-      onText(join(heard, final, interim));
+      transcript = join(final, interim); spoke = true;
+      onText(join(heard, transcript));
     };
     recognition.onerror = onerror;
     recognition.onend = () => {
-      heard = join(heard, session);
+      // Some engines end with words still marked interim. Keep the latest visible
+      // transcript so a browser restart never silently removes what the user said.
+      heard = join(heard, transcript);
       if (stopped || failed) return;
       silent = spoke ? 0 : silent + 1;
       if (silent >= silentRestarts) { stopped = true; onIdle(heard); return; }

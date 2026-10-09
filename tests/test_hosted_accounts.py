@@ -256,9 +256,8 @@ class VoiceCommandTests(unittest.TestCase):
           let text = '', idle = 0;
           const stop = listen({ onText: value => text = value, onIdle: () => idle++, onError: e => { throw new Error(e); } });
           if (!sessions[0].continuous) throw new Error('recognition is not continuous');
-          said(sessions[0], ['Tell me about', false]);
-          if (text !== 'Tell me about') throw new Error('interim words not shown: ' + text);
-          said(sessions[0], ['Tell me about the', true]);
+          said(sessions[0], ['Tell me about the', false]);
+          if (text !== 'Tell me about the') throw new Error('interim words not shown: ' + text);
           sessions[0].onend();                         // the browser ends a session after a pause
           if (sessions.length !== 2 || !sessions[1].started) throw new Error('listening stopped at a pause');
           said(sessions[1], ['history of Rome', true]);
