@@ -176,6 +176,16 @@ class InstallableAppTests(unittest.TestCase):
         self.assertIn("$('#mic').disabled = blocked || !voiceAvailable;", script.decode())
         self.assertIn('function syncWebButton()', script.decode())
 
+    def test_answers_offer_listen_and_copy_and_are_never_read_aloud_on_their_own(self):
+        _, script = self.get('/chat.js')
+        script = script.decode()
+        self.assertIn("el.append(replyActions());", script)
+        self.assertIn('<span>Listen</span>', script)
+        self.assertIn('<span>Copy</span>', script)
+        self.assertNotIn('answerAloud', script)
+        submit = script[script.index('async function submit()'):script.index("$('#mic').classList.remove('hidden');")]
+        self.assertNotIn('speak(', submit)
+
     def test_voice_bar_offers_pause_and_send(self):
         _, page = self.get('/')
         page = page.decode()

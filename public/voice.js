@@ -3,6 +3,7 @@
 // so the mic button is disabled there.
 const Recognition = globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition;
 export const voiceSupported = !!Recognition;
+export const speechSupported = !!globalThis.speechSynthesis && typeof globalThis.SpeechSynthesisUtterance === 'function';
 
 // Short spoken phrases that run an action instead of being sent to Oreo.
 const COMMANDS = [

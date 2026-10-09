@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { markdown, typesetMath } from './markdown.js';
 import './mascot.js';
 import { preferences, loadPreferences, installSettings } from './preferences.js';
-import { voiceSupported, listen, command, speak, stopSpeaking, speaking } from './voice.js';
+import { voiceSupported, speechSupported, listen, command, speak, stopSpeaking } from './voice.js';
 
 const $ = s => document.querySelector(s);
 const composer = $('#message'), timeline = $('#answer'), stage = $('#chat');
@@ -64,7 +64,7 @@ function sourceLinks(parent, sources = []) {
       link.textContent = `${i + 1} · ${url.hostname.replace(/^www\./, '')}`; link.title = source.title || url.href; list.append(link);
     } catch {}
   }
-  if (list.children.length) parent.append(list);
+  if (list.children.length) parent.insertBefore(list, parent.querySelector(':scope > .reply-actions'));
 }
 function message(row) {
   const value = typeof row.content === 'string' ? unpack(row.content) : row.content;
@@ -77,9 +77,41 @@ function message(row) {
     }
   } else {
     const body = document.createElement('div'); body.className = 'md'; body.innerHTML = markdown(value.text, value.sources); el.append(body); typesetMath(body);
+    el.append(replyActions());
     sourceLinks(el, value.sources);
   }
   return el;
+}
+// Listen and Copy under each answer. Nothing is read aloud unless Listen is pressed.
+const iconAttrs = 'viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+function replyActions() {
+  const row = document.createElement('div'); row.className = 'reply-actions';
+  row.innerHTML = (speechSupported ? `<button type="button" class="reply-action reply-listen" aria-pressed="false" title="Listen to this answer"><svg ${iconAttrs}><path d="M3.5 8v4h3l4 3.5v-11L6.5 8Z"/><path d="M13.5 7.5a3.5 3.5 0 0 1 0 5M15.5 5a7 7 0 0 1 0 10"/></svg><span>Listen</span></button>` : '')
+    + `<button type="button" class="reply-action reply-copy" title="Copy this answer"><svg ${iconAttrs}><rect x="7" y="7" width="9" height="9" rx="2"/><path d="M4 13V5a1 1 0 0 1 1-1h8"/></svg><span>Copy</span></button>`;
+  return row;
+}
+// The answer as it reads on screen, without code-block Copy labels or duplicate maths markup.
+function answerText(button) {
+  const body = button.closest('.assistant').querySelector('.md');
+  const hidden = [...body.querySelectorAll('.copy, .katex-mathml')];
+  for (const node of hidden) node.style.display = 'none';
+  const text = body.innerText.trim();
+  for (const node of hidden) node.style.display = '';
+  return text;
+}
+let readingButton = null;
+function showReading(button, on) {
+  button.classList.toggle('on', on); button.setAttribute('aria-pressed', String(on));
+  button.querySelector('span').textContent = on ? 'Stop' : 'Listen';
+  button.title = on ? 'Stop reading' : 'Listen to this answer';
+}
+function stopReading() {
+  if (readingButton) { showReading(readingButton, false); readingButton = null; }
+  stopSpeaking();
+}
+function startReading(button) {
+  readingButton = button; showReading(button, true);
+  speak(answerText(button), () => { if (readingButton === button) { showReading(button, false); readingButton = null; } });
 }
 function render() {
   timeline.replaceChildren();
@@ -113,7 +145,7 @@ async function account(expected = epoch) {
   ready = true; conversations = historyData.conversations; renderSidebar();
 }
 function clearFiles() { for (const file of pending) if (file.preview) URL.revokeObjectURL(file.preview); pending = []; tray(); }
-function resetDraft() { endVoice(); spokenDraft = false; for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; syncWebButton(); }
+function resetDraft() { endVoice(); stopReading(); spokenDraft = false; for (const url of previewUrls) URL.revokeObjectURL(url); previewUrls.clear(); clearFiles(); composer.value = ''; composer.style.height = 'auto'; web = preferences.web; syncWebButton(); }
 async function deleteConversation(row) {
   if (busy || loading || reading || !confirm('Delete this chat? This cannot be undone.')) return;
   const expected = epoch; loading = true; controls(); notify('Deleting chat…');
@@ -276,14 +308,13 @@ const micState = state => {
   $('#mic').dataset.state = state; $('#mic').classList.toggle('on', state !== 'idle'); $('#mic').setAttribute('aria-pressed', String(state !== 'idle'));
   $('#mic').title = { idle: 'Talk to Oreo', listening: 'Listening. Tap to pause.', speaking: 'Speaking. Tap to stop.' }[state]; $('#mic').setAttribute('aria-label', $('#mic').title);
 };
-const answerAloud = text => { micState('speaking'); speak(text, () => micState('idle')); };
-const announce = text => { notify(text); answerAloud(text); };
+const announce = text => notify(text);
 function runCommand(action) {
   if (action === 'new-chat') { newChat(); announce('Started a new chat.'); }
   else if (action === 'web-on' || action === 'web-off') { web = action === 'web-on'; syncWebButton(); announce(web ? 'Web search is on.' : 'Web search is off.'); }
   else if (action === 'settings') { notify(''); $('#open-settings').click(); }
-  else if (action === 'repeat') { const last = [...timeline.querySelectorAll('.assistant .md')].pop(); if (last) answerAloud(last.textContent); else announce('There is no answer to read yet.'); }
-  else { stopSpeaking(); micState('idle'); notify(''); }
+  else if (action === 'repeat') { const last = [...timeline.querySelectorAll('.reply-listen')].pop(); if (last) { stopReading(); startReading(last); } else announce('There is no answer to read yet.'); }
+  else { stopReading(); notify(''); }
 }
 // A voice session runs from the first mic tap until the message is sent. While it is
 // on, the bar above the box offers Pause/Resume and Send, so the speaker can stop,
@@ -307,7 +338,7 @@ function endVoice() {
   voiceBar('off');
 }
 function startListening() {
-  stopSpeaking();
+  stopReading();
   // Resuming adds to whatever is in the box now, including anything typed while paused.
   const before = composer.value.trim();
   micState('listening'); voiceBar('listening'); notify('');
@@ -328,13 +359,11 @@ async function submit() {
   const action = spoken ? command(composer.value) : null;
   endVoice();
   if (action) { spokenDraft = false; composer.value = ''; composer.oninput(); runCommand(action); return; }
-  if (spoken) stopSpeaking();
   const reply = await send();
-  if (reply) { spokenDraft = false; if (spoken) answerAloud(reply); }
+  if (reply) spokenDraft = false;
 }
 $('#mic').classList.remove('hidden');
 $('#mic').onclick = () => {
-  if (speaking() || $('#mic').dataset.state === 'speaking') { stopSpeaking(); micState('idle'); return; }
   if (voiceSession === 'listening') pauseListening(); else startListening();
 };
 $('#voice-pause').onclick = () => { if (voiceSession === 'listening') pauseListening(); else startListening(); };
@@ -347,6 +376,14 @@ document.addEventListener('drop', event => { if (ready && event.dataTransfer.fil
 document.addEventListener('click', async event => {
   const button = event.target.closest('.copy'); if (!button) return;
   try { await navigator.clipboard.writeText(button.parentElement.querySelector('code').textContent); button.textContent = 'Copied'; setTimeout(() => button.textContent = 'Copy', 1500); } catch { notify('Could not copy. Select the code to copy it.'); }
+});
+document.addEventListener('click', async event => {
+  const listen = event.target.closest('.reply-listen');
+  if (listen) { const wasReading = listen === readingButton; stopReading(); if (!wasReading) startReading(listen); return; }
+  const copy = event.target.closest('.reply-copy'); if (!copy) return;
+  const label = copy.querySelector('span');
+  try { await navigator.clipboard.writeText(answerText(copy)); label.textContent = 'Copied'; setTimeout(() => label.textContent = 'Copy', 1500); }
+  catch { notify('Could not copy. Select the answer to copy it.'); }
 });
 $('#mobile-menu').onclick = () => document.body.classList.toggle('drawer');
 $('.mobile-backdrop').onclick = () => document.body.classList.remove('drawer');
