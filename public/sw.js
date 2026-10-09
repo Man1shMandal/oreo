@@ -19,7 +19,7 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   const shell = url.origin === location.origin && !url.pathname.startsWith('/api/');
-  // The Supabase client module comes from esm.sh; keep a copy so the page can start offline.
+  // Keep the Supabase client and math assets available after their first load.
   const library = url.hostname === 'esm.sh' || url.hostname === 'cdn.jsdelivr.net';
   if (!shell && !library) return;
   // Network first, so a new release shows up on the next open; the cache is only a fallback.
