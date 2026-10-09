@@ -8,11 +8,12 @@ fast-forward. Integrated its continuous voice dictation, pause/resume and send
 controls, explicit Listen and Copy answer actions, and updated hosting notes.
 Preserved the upstream commits. Fixed a transcript edge case so words still
 marked interim by the browser survive recognition session restarts.
+Released as `c54b582` to `origin/main`.
 
 Validation: all 74 Python tests and 5 Node tests pass; hosted JS syntax checks,
 Python compilation, and `git diff --check` pass. Browser microphone permission
 and real speech recognition were not exercised. No production model calls were
-made. Push is pending this final record.
+made.
 
 ## 2026-10-09 — Refined animated character
 
