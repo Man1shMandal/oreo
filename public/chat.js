@@ -276,11 +276,15 @@ $('#mic').onclick = () => {
   if (stopListening) { stopListening(); stopListening = null; composer.value = draftBeforeVoice; composer.oninput(); micState('idle'); notify(''); return; }
   const before = draftBeforeVoice = composer.value.trim();
   micState('listening'); notify('Listening…');
-  stopListening = listen({
-    onText: text => { composer.value = (before ? before + ' ' : '') + text; composer.oninput(); },
-    onDone: text => { stopListening = null; micState('idle'); notify(text ? '' : "Didn't catch that. Tap the mic and try again."); if (text) void voiceTurn(text, before); },
-    onError: message => { stopListening = null; micState('idle'); notify(message); },
-  });
+  try {
+    stopListening = listen({
+      onText: text => { composer.value = (before ? before + ' ' : '') + text; composer.oninput(); },
+      onDone: text => { stopListening = null; micState('idle'); notify(text ? '' : "Didn't catch that. Tap the mic and try again."); if (text) void voiceTurn(text, before); },
+      onError: message => { stopListening = null; micState('idle'); notify(message); },
+    });
+  } catch {
+    stopListening = null; micState('idle'); notify('Microphone is unavailable. Check browser permissions and try again.');
+  }
 };
 composer.oninput = () => { composer.style.height = 'auto'; composer.style.height = Math.min(composer.scrollHeight, 220) + 'px'; controls(); };
 composer.onkeydown = event => { if (preferences.enter && event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void send(); } };

@@ -8,17 +8,20 @@ terminal's chats.
 import ipaddress
 import json
 import os
+import queue
 import re
 import signal
 import socket
 import subprocess
 import sys
+import threading
+import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote
 
-from . import attach, config, files, lean, research, settings, store
+from . import attach, code_agent, config, files, lean, research, settings, store
 from .provider import Provider
 
 PAGE = Path(__file__).with_name("web.html")
@@ -31,10 +34,15 @@ NAME = "oreo.local"   # announced on the network with Bonjour
 class App:
     """State shared by all requests."""
 
-    def __init__(self):
+    def __init__(self, workspace=None):
         self.settings = settings.load()
         key = os.environ.get("ABBY_API_KEY") or settings.get_key()
         self.provider = Provider(key) if key else None
+        self.agent_lock = threading.Lock()
+        self.agent_pending = {}
+        self.workspace = Path(workspace or Path.cwd()).expanduser().resolve(strict=True)
+        if not self.workspace.is_dir():
+            raise ValueError("The Code workspace must be an existing directory.")
 
 
 def clean_name(raw):
@@ -162,6 +170,7 @@ class Handler(BaseHTTPRequestHandler):
             "settings": {k: st[k] for k in keys},
             "has_key": self.app.provider is not None,
             "owner": self.owner,
+            **({"workspace": str(self.app.workspace)} if self.owner else {}),
         })
 
     def get_chats(self, cid=None):
@@ -317,6 +326,142 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass  # next message just sends a shorter window
 
+    def post_agent(self):
+        """Run a local coding-agent turn. Workspace access is limited to the owner."""
+        self.need_owner()
+        app, b = self.app, self.body()
+        if not app.provider:
+            return self.send(400, {"error": "Oreo isn't set up yet (no API key)"})
+        text = str(b.get("text", "")).strip()
+        if not text:
+            return self.send(400, {"error": "Write a coding request."})
+        folder = self.folder()
+        chat = store.Chat.load(self.chat_path(b["id"])) if b.get("id") else store.Chat(folder=folder)
+        if not chat.title:
+            chat.title = text.splitlines()[0][:60]
+        chat.messages.append({"role": "user", "content": text})
+        chat.save()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+
+        def event(payload):
+            self.wfile.write(f"data: {json.dumps(payload)}\n\n".encode())
+            self.wfile.flush()
+
+        model = b.get("model") if b.get("model") in config.MODELS.values() else app.settings["model"]
+        event({"chat": chat.path.stem, "title": chat.title})
+        event({"status": "Reading project instructions…"})
+        tool_text = "\n".join(f"- {name}: {doc}" for name, doc in code_agent.TOOL_DOCS.items())
+        system = code_agent.GUIDE.format(root=str(app.workspace), tools=tool_text)
+        try:
+            system += "\n\nInitial project context:\n" + code_agent.project_context(app.workspace)
+        except Exception:
+            pass
+        completed_tools = 0
+        try:
+            for step in range(16):
+                history = chat.messages[-32:]
+                # Keep recent context bounded while preserving whole messages.
+                used, bounded = 0, []
+                for row in reversed(history):
+                    content = row["content"]
+                    if used + len(content) > 60_000 and bounded:
+                        break
+                    bounded.append(row)
+                    used += len(content)
+                bounded.reverse()
+                messages = [{"role": "system", "content": system}] + bounded
+                raw, shown = "", 0
+                event({"status": "Thinking…"})
+                for piece in app.provider.stream(model, messages, max_tokens=4096, temperature=0.2):
+                    raw += piece
+                    visible, call = code_agent.parse_call(raw)
+                    limit = len(visible) if call else code_agent.visible_length(raw)
+                    if limit > shown:
+                        event({"text": raw[shown:limit]})
+                        shown = limit
+                visible, call = code_agent.parse_call(raw)
+                if not call:
+                    if not raw.strip():
+                        raise RuntimeError("The model sent back an empty reply. Try again shortly.")
+                    chat.messages.append({"role": "assistant", "content": raw})
+                    chat.save()
+                    event({"done": lean.footer({}, messages, raw), "reply": raw, "conversation_id": chat.path.stem,
+                           "model": app.provider.last_model})
+                    return
+
+                name, args = call
+                summary = {key: args[key] for key in ("path", "destination", "command", "url") if key in args}
+                event({"tool": {"name": name, "args": summary}})
+                if name not in code_agent.TOOL_DOCS:
+                    result = "Error: unknown tool. Use only one of the available project tools."
+                else:
+                    try:
+                        plan = code_agent.execute(app.workspace, name, args)
+                        if name in code_agent.WRITE_TOOLS:
+                            approval_id = uuid.uuid4().hex
+                            decision = queue.Queue(maxsize=1)
+                            with app.agent_lock:
+                                app.agent_pending[approval_id] = decision
+                            preview = plan if isinstance(plan, dict) else {"result": str(plan)}
+                            event({"approval": {"id": approval_id, "name": name, "args": summary,
+                                                 "preview": preview}})
+                            try:
+                                accepted = decision.get(timeout=180)
+                            except queue.Empty:
+                                accepted = False
+                            finally:
+                                with app.agent_lock:
+                                    app.agent_pending.pop(approval_id, None)
+                            if accepted:
+                                result = code_agent.apply(app.workspace, name, args)
+                            else:
+                                result = "The user declined this action. Do not retry it; continue with a safe alternative or ask what they prefer."
+                        else:
+                            result = plan
+                    except Exception as error:
+                        result = f"Error: {type(error).__name__}: {error}"
+                # Keep tool requests and results in context, but only render normal prose.
+                prefix = raw[:raw.find("</tool>") + len("</tool>")]
+                chat.messages.append({"role": "assistant", "content": prefix})
+                result_text = result.get("result", "") if isinstance(result, dict) else str(result)
+                chat.messages.append({"role": "user", "content": f'<result tool="{name}">\n{result_text}\n</result>'})
+                chat.save()
+                completed_tools += 1
+                event({"tool_result": {"name": name, "result": result_text[:1000]}})
+                event({"status": "Using " + name.replace("_", " ") + "…"})
+            raise RuntimeError("Stopped after 16 tool steps. Ask Oreo to continue.")
+        except (BrokenPipeError, ConnectionResetError):
+            return
+        except Exception as error:
+            if not completed_tools and chat.messages and chat.messages[-1] == {"role": "user", "content": text}:
+                chat.messages.pop()
+                if chat.messages:
+                    chat.save()
+                else:
+                    chat.path.unlink(missing_ok=True)
+            try:
+                event({"error": str(error)})
+            except OSError:
+                pass
+
+    def post_agent_decision(self):
+        self.need_owner()
+        b = self.body()
+        approval_id = str(b.get("id", ""))
+        with self.app.agent_lock:
+            decision = self.app.agent_pending.get(approval_id)
+            if decision is None:
+                return self.send(404, {"error": "That approval has expired."})
+            try:
+                decision.put_nowait(b.get("approved") is True)
+            except queue.Full:
+                return self.send(409, {"error": "That approval was already answered."})
+        self.send(200, {"ok": True})
+
     def research(self, chat, text):
         """Search and read the web when the question needs it. Progress goes to the page as {status}."""
         step = lambda s: self.wfile.write(f"data: {json.dumps({'status': s})}\n\n".encode()) or self.wfile.flush()
@@ -353,6 +498,12 @@ def main(argv=()):
     """Port 80 by default so the link is just http://oreo.local; falls back to 4747 if 80 is taken."""
     local = "--local" in argv
     asked = next((int(a) for a in argv if a.isdigit()), None)
+    workspace = None
+    for index, arg in enumerate(argv):
+        if arg == "--workspace" and index + 1 < len(argv):
+            workspace = argv[index + 1]
+        elif arg.startswith("--workspace="):
+            workspace = arg.split("=", 1)[1]
     for port in [asked] if asked else [80, 4747]:
         try:
             server = ThreadingHTTPServer(("127.0.0.1" if local else "0.0.0.0", port), Handler)
@@ -360,7 +511,8 @@ def main(argv=()):
         except OSError:
             if asked or port == 4747:
                 raise
-    Handler.app, Handler.port = App(), port
+    Handler.app, Handler.port = App(workspace), port
+    print(f"           Oreo Code workspace: {Handler.app.workspace}")
     suffix = "" if port == 80 else f":{port}"
     print(f"oreo web · on this Mac: http://localhost{suffix}")
     bonjour = None

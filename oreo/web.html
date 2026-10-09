@@ -97,6 +97,8 @@
   #web { height: 34px; padding: 0 10px; border-radius: 10px; color: var(--muted); font-size: 13px; flex: none; }
   #web.on { color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
   #web.on::before { content: "● "; color: #22c55e; font-size: 10px; vertical-align: 1px; }
+  #agent { height: 34px; padding: 0 10px; border-radius: 10px; color: var(--muted); font-size: 13px; flex: none; }
+  #agent.on { color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
   .sources { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 12px; }
   .sources a { color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; }
   .sources a:hover { color: var(--ink); }
@@ -152,6 +154,12 @@
            background: linear-gradient(90deg, #22d3ee, #a78bfa, #f472b6); }
   #usage-detail { font-size: 12px; color: var(--muted); }
   #status { font-size: 13px; color: var(--muted); margin-top: 12px; min-height: 1.2em; }
+  #approval-dialog { width: min(760px, 94vw); max-height: 82vh; }
+  #approval-title { margin-bottom: 4px; }
+  #approval-summary { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+  #approval-preview { max-height: 52vh; overflow: auto; white-space: pre; background: var(--panel); border: 1px solid var(--line);
+                      border-radius: 8px; padding: 12px; font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .agent-activity { color: var(--muted); font-size: 12px; margin-top: 8px; }
 
   @media (max-width: 720px) { aside { display: none; } }
   .brand{letter-spacing:-.035em;font-weight:650}.brand img{display:block}
@@ -173,6 +181,7 @@
       <div id="tray"></div>
       <button id="attach" type="button" title="Attach PDF, Word, text or images">+</button>
       <button id="web" type="button" title="Let Oreo search the web when a question needs it">Web</button>
+      <button id="agent" type="button" title="Let Oreo Code inspect and edit this project" hidden>Oreo Code</button>
       <input id="pick" type="file" multiple hidden accept="image/*,.pdf,.docx,.txt,.md,.csv,.json,.py,.js,.ts,.html,.css,.xml,.yaml,.yml,.log,.c,.cpp,.h,.java,.go,.rs,.sh,.sql">
       <textarea id="input" rows="1" placeholder="Message Oreo" autofocus></textarea>
       <button id="send" type="submit" title="Send (Enter)">↑</button>
@@ -211,6 +220,17 @@
     <span class="spacer"></span>
     <button class="btn" id="s-close" type="button">Close</button>
     <button class="btn primary" id="s-save" type="button">Save</button>
+  </div>
+</dialog>
+
+<dialog id="approval-dialog">
+  <h2 id="approval-title">Review action</h2>
+  <div id="approval-summary"></div>
+  <pre id="approval-preview"></pre>
+  <div class="actions">
+    <button class="btn" id="approval-decline" type="button">Decline</button>
+    <span class="spacer"></span>
+    <button class="btn primary" id="approval-accept" type="button">Allow once</button>
   </div>
 </dialog>
 
@@ -313,12 +333,22 @@ function addMsg(role, content, meta, images = [], sources = []) {
   const el = document.createElement("div");
   el.className = "msg " + role;
   if (role === "user") {
+    const toolResult = content.match(/^<result tool="([\w-]+)">\n([\s\S]*?)\n<\/result>$/);
+    if (toolResult) {
+      el.className = "msg assistant";
+      el.innerHTML = `<div class="agent-activity">Oreo Code · ${esc(toolResult[1].replaceAll("_", " "))}</div><div class="meta"></div>`;
+      el.querySelector(".meta").textContent = toolResult[2].slice(0, 500);
+      $("#msgs").appendChild(el);
+      return el;
+    }
     const {text, files} = splitFiles(content);
     el.innerHTML = (images.length ? `<div class="imgs">${images.map(src => `<img src="${esc(src)}" alt="">`).join("")}</div>` : "") +
       (text.trim() ? `<div class="body"></div>` : "") + (files.length ? `<div class="chips">attached ${files.map(esc).join(", ")}</div>` : "");
     if (text.trim()) el.querySelector(".body").textContent = text;
   } else {
-    el.innerHTML = `<div class="md">${markdown(content)}</div>` + sourcesHtml(sources) + (meta ? `<div class="meta">${esc(meta)}</div>` : "");
+    const toolCall = content.match(/<tool name="([\w-]+)">[\s\S]*?<\/tool>/);
+    const visible = content.replace(/<tool name="[\w-]+">[\s\S]*?<\/tool>/, "").trim();
+    el.innerHTML = `<div class="md">${markdown(visible)}</div>` + (toolCall ? `<div class="agent-activity">Oreo Code · requested ${esc(toolCall[1].replaceAll("_", " "))}</div>` : "") + sourcesHtml(sources) + (meta ? `<div class="meta">${esc(meta)}</div>` : "");
   }
   $("#msgs").appendChild(el);
   return el;
@@ -388,6 +418,7 @@ function readFile(f) {
 }
 
 async function addFiles(list) {
+  if (agentOn) { alert("Turn off Oreo Code before attaching files."); return; }
   for (const f of list) {
     if (f.size > MAX_FILE) { alert(`${f.name} is over 15 MB`); continue; }
     const name = f.name || "pasted.png";
@@ -433,9 +464,39 @@ function setBusy(busy) {
 }
 const updateSend = () => { $("#send").disabled = !controller && !$("#input").value.trim() && !pending.length; };
 
+function reviewAgentAction(action) {
+  const dialog = $("#approval-dialog"), signal = controller?.signal;
+  const preview = action.preview || {}, name = action.name.replaceAll("_", " ");
+  const target = preview.path || action.args.path || "";
+  const detail = action.name === "run_command" ? (preview.command || action.args.command || "") : (preview.diff || preview.result || "");
+  $("#approval-title").textContent = action.name === "run_command" ? "Run this command?" : `Review ${name}`;
+  $("#approval-summary").textContent = target ? `${name} · ${target}` : name;
+  $("#approval-preview").textContent = String(detail).slice(0, 16000) || "No preview available.";
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = approved => {
+      if (settled) return;
+      settled = true;
+      signal?.removeEventListener("abort", abort);
+      dialog.removeEventListener("cancel", cancel);
+      if (dialog.open) dialog.close();
+      resolve(approved);
+    };
+    const abort = () => finish(false);
+    const cancel = event => { event.preventDefault(); finish(false); };
+    $("#approval-accept").onclick = () => finish(true);
+    $("#approval-decline").onclick = () => finish(false);
+    dialog.addEventListener("cancel", cancel);
+    signal?.addEventListener("abort", abort, {once: true});
+    if (signal?.aborted) return finish(false);
+    dialog.showModal();
+  });
+}
+
 async function send() {
   const text = $("#input").value.trim();
   if (!text && !pending.length) return;
+  if (agentOn && pending.length) { alert("Remove attached files before using Oreo Code."); return; }
   if (!state.has_key) {
     if (state.owner) return openSettings("Paste your ABB API key first (it starts with sk-).");
     return alert("Oreo isn't set up yet. Ask the owner to add an API key.");
@@ -461,7 +522,7 @@ async function send() {
   let reply = "", buf = "";
   const meta = (t, err) => { el.insertAdjacentHTML("beforeend", `<div class="meta${err ? " err" : ""}">${esc(t)}</div>`); };
   try {
-    const r = await fetch("/api/chat", {
+    const r = await fetch(agentOn ? "/api/agent" : "/api/chat", {
       method: "POST", signal: controller.signal,
       headers: {...who(), "Content-Type": "application/json"},
       body: JSON.stringify({id: chatId, model: $("#model").value, text, web: webOn,
@@ -481,13 +542,24 @@ async function send() {
         if (ev.chat) {
           const isNew = chatId !== ev.chat;
           chatId = ev.chat; history.replaceState(null, "", "#" + chatId);
-          if (ev.attached.length) userEl.insertAdjacentHTML("beforeend", `<div class="chips">attached ${ev.attached.map(esc).join(", ")}</div>`);
-          for (const e of ev.errors) userEl.insertAdjacentHTML("beforeend", `<div class="chips">${esc(e)}</div>`);
+          if ((ev.attached || []).length) userEl.insertAdjacentHTML("beforeend", `<div class="chips">attached ${ev.attached.map(esc).join(", ")}</div>`);
+          for (const e of ev.errors || []) userEl.insertAdjacentHTML("beforeend", `<div class="chips">${esc(e)}</div>`);
           if (isNew) loadChats();
         } else if (ev.status) {
           quiet(); label(ev.status);
         } else if (ev.sources) {
           sources = ev.sources;
+        } else if (ev.tool) {
+          const {name, args} = ev.tool;
+          const target = args.path || args.command || "";
+          meta(`${name.replaceAll("_", " ")}${target ? " · " + target : ""}`);
+        } else if (ev.approval) {
+          quiet();
+          const a = ev.approval;
+          const approved = await reviewAgentAction(a);
+          await api("agent_decision", {method: "POST", body: {id: a.id, approved}});
+        } else if (ev.tool_result) {
+          meta((ev.tool_result.result || "complete").split("\n")[0]);
         } else if (ev.text !== undefined) {
           quiet();
           const stick = atBottom();
@@ -576,6 +648,19 @@ let webOn = localStorage.getItem("oreo-web") !== "0";
 const showWeb = () => $("#web").classList.toggle("on", webOn);
 $("#web").onclick = () => { webOn = !webOn; localStorage.setItem("oreo-web", webOn ? "1" : "0"); showWeb(); };
 showWeb();
+let agentOn = false;
+function setAgentMode(enabled) {
+  agentOn = Boolean(enabled);
+  $("#agent").classList.toggle("on", agentOn);
+  $("#agent").setAttribute("aria-pressed", String(agentOn));
+  $("#attach").disabled = $("#web").disabled = agentOn;
+  $("#input").placeholder = agentOn ? "Ask Oreo Code to work on this project" : "Message Oreo";
+  localStorage.setItem("oreo-code", agentOn ? "1" : "0");
+}
+$("#agent").onclick = () => {
+  if (!agentOn && pending.length) { alert("Remove attached files before switching to Code mode."); return; }
+  setAgentMode(!agentOn);
+};
 $("#pick").onchange = e => { addFiles(e.target.files); e.target.value = ""; };
 $("#input").addEventListener("paste", e => {
   const fs = [...e.clipboardData.files];
@@ -632,6 +717,9 @@ $("#who").onclick = async () => { await askName(); newChat(); };
   state = await api("state");
   fillModels($("#model"), state.settings.model);
   $("#owner-only").hidden = $("#file-hint").hidden = !state.owner;
+  $("#agent").hidden = !state.owner;
+  if (state.workspace) $("#agent").title = `Code agent workspace: ${state.workspace}`;
+  setAgentMode(state.owner && localStorage.getItem("oreo-code") === "1");
   const id = location.hash.slice(1);
   if (id) await openChat(id).catch(newChat); else newChat();
   updateSend();

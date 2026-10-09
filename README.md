@@ -15,10 +15,13 @@ Or in the browser:
     oreo web              # http://localhost here, http://oreo.local for the rest of the network
     oreo web --local      # this Mac only
     oreo web 8080         # another port; --no-open skips opening the browser
+    oreo web --workspace ~/code/project  # choose Oreo Code's project directory
 
 It uses port 80 so the link has no port number, and falls back to 4747 if 80 is taken. The name `oreo.local` is announced with Bonjour while the server runs. Macs, iPhones and recent Windows and Android devices pick it up; on anything else, use the IP address it prints.
 
 Use the + button to attach PDFs, Word files, text and code files, or images. You can also drag them in or paste them. Documents are turned into text. Images and scanned PDFs are sent as PDF pages, the only way the ABB gateway takes pictures. Only Claude can see them, so a message with a picture always goes to Sonnet.
+
+On the owner's Mac, **Oreo Code** is a local coding agent. It reads project guidance, inspects Git status and diffs, searches and edits files, creates, moves and deletes files, looks up public documentation, and runs project commands. It previews each change and asks before every file write, move, deletion, or command. Start `oreo web` from the project directory, or pass `--workspace /path/to/project`. Code mode is not available to LAN visitors or the hosted app.
 
 The Web button (on by default) lets Oreo research. Haiku first decides whether the question needs the web. If it does, Oreo searches DuckDuckGo (no key needed), reads the top 5 pages, keeps the relevant paragraphs and answers with numbered sources. A searched answer costs about 3k tokens; anything else costs one tiny Haiku call. Paste a link and Oreo reads that page directly.
 
