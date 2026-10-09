@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-10-09 — Share text rendering across Oreo views
+Use one escaped Markdown renderer for the hosted and local chat apps so fixes
+to math, citations, lists, tables, links and code behave the same. Use pinned
+KaTeX with trust disabled for model-supplied equations; preserve formula source
+when the library is unavailable. Format streamed text once after completion to
+avoid rebuilding large answers on every chunk. Keep wide equations, tables and
+code inside scrollable mobile layouts.
+
 ## 2026-10-09 — Use browser-native voice APIs
 Voice input and read-aloud use the browser's speech recognition and speech
 synthesis APIs. Oreo adds no speech service, API key, or voice-specific backend

@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.css" integrity="sha384-3rdsX6e5mueWyoweR9NIVmtEsUkokpBT/0ALqKKIBMr9j4qhHkaIkAcGgsE6uVlp" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/katex.min.js" integrity="sha384-QFFtAGzvvj+bfgCGxXJlNZZR1nXEZgvG8tDLCCY1F19xl20WlfTYgguB4VcNdxYk" crossorigin="anonymous"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.19.0/dist/contrib/auto-render.min.js" integrity="sha384-bjyGPfbij8/NDKJhSGZNP/khQVgtHUE5exjm4Ydllo42FwIgYsdLO2lXGmRBf5Mz" crossorigin="anonymous" onload="window.dispatchEvent(new Event('oreo-math-ready'))"></script>
 <title>oreo</title>
 <link rel="icon" type="image/svg+xml" href="/oreo.svg">
 <style>
@@ -60,20 +63,30 @@
   .empty { text-align: center; color: var(--muted); margin-top: 28vh; }
   .empty b { display: block; color: var(--ink); font-size: 22px; margin-bottom: 4px; }
 
+  .md { min-width: 0; overflow-wrap: anywhere; line-height: 1.7; }
   .md > :first-child { margin-top: 0; } .md > :last-child { margin-bottom: 0; }
-  .md p, .md ul, .md ol, .md pre, .md blockquote, .md table { margin: 0 0 12px; }
-  .md h1, .md h2, .md h3, .md h4 { margin: 18px 0 8px; line-height: 1.3; }
-  .md h1 { font-size: 1.3em; } .md h2 { font-size: 1.15em; } .md h3, .md h4 { font-size: 1em; }
-  .md ul, .md ol { padding-left: 22px; }
-  .md code { font: 13px var(--mono); background: var(--code); padding: 1px 5px; border-radius: 4px; }
-  .md pre { position: relative; background: var(--code); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+  .md p, .md ul, .md ol, .md pre, .md blockquote, .md .table-scroll { margin: 0 0 14px; }
+  .md h1, .md h2, .md h3, .md h4, .md h5, .md h6 { margin: 22px 0 9px; line-height: 1.3; overflow-wrap: anywhere; }
+  .md h1 { font-size: 1.45em; } .md h2 { font-size: 1.25em; } .md h3 { font-size: 1.1em; } .md h4, .md h5, .md h6 { font-size: 1em; }
+  .md ul, .md ol { padding-left: 24px; } .md li + li { margin-top: 5px; }
+  .md li input[type="checkbox"] { width: 13px; height: 13px; margin: 0 5px 0 0; accent-color: var(--ink); vertical-align: -1px; }
+  .md code { font: 13px var(--mono); background: var(--code); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  .md pre { position: relative; background: var(--code); border-radius: 8px; padding: 14px 52px 14px 14px; overflow-x: auto; max-width: 100%; }
   .md pre code { background: none; padding: 0; }
-  .md pre button { position: absolute; top: 6px; right: 8px; font-size: 12px; color: var(--muted); }
-  .md blockquote { border-left: 3px solid var(--line); padding-left: 12px; color: var(--muted); }
-  .md table { border-collapse: collapse; font-size: 14px; display: block; overflow-x: auto; }
-  .md th, .md td { border: 1px solid var(--line); padding: 4px 10px; text-align: left; }
-  .md a { color: inherit; }
+  .md pre button { position: absolute; top: 7px; right: 8px; font-size: 12px; color: var(--muted); }
+  .md blockquote { border-left: 3px solid var(--line); padding: 2px 0 2px 14px; color: var(--muted); }
+  .md .table-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+  .md table { border-collapse: collapse; min-width: 100%; font-size: 14px; }
+  .md th, .md td { border-bottom: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  .md th { font-weight: 600; background: var(--code); }
+  .md .math-display { display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 8px 2px; text-align: center; }
+  .md .math-inline { white-space: normal; }
+  .md .katex { font-size: 1em; }
+  .md a { color: inherit; text-underline-offset: 3px; }
+  .md .citation { text-decoration: none; font-size: .78em; vertical-align: super; margin-left: 2px; color: var(--muted); }
+  .md .citation:hover { text-decoration: underline; color: var(--ink); }
   .md hr { border: 0; border-top: 1px solid var(--line); }
+  @media (max-width: 600px) { .md { font-size: 15px; line-height: 1.68; } .md .math-display { text-align: left; } .md pre { padding: 42px 12px 12px; } }
 
   /* composer */
   form.compose { padding: 8px 0 20px; }
@@ -127,6 +140,7 @@
   @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
   .streaming .md > :last-child::after { content: ""; display: inline-block; width: 7px; height: 1em; margin-left: 2px;
           vertical-align: -2px; background: var(--ink); border-radius: 1px; animation: blink 1s steps(2) infinite; }
+  .streaming .md.streaming-plain { white-space: pre-wrap; overflow-wrap: anywhere; }
   .streaming .md > pre:last-child::after { display: none; }
   @keyframes blink { 50% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) { .wave i, .thinking .label, .streaming .md > :last-child::after { animation: none; } }
@@ -234,8 +248,10 @@
   </div>
 </dialog>
 
-<script>
+<script type="module">
+import { markdown, typesetMath } from "/markdown.js";
 const $ = s => document.querySelector(s);
+const esc = value => String(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
 let state = null, chatId = null, controller = null;
 
 // ---------- api
@@ -252,72 +268,6 @@ async function api(path, opts = {}) {
   const d = await r.json();
   if (!r.ok) throw new Error(d.error || r.statusText);
   return d;
-}
-
-// ---------- markdown (small and safe: escape first, then format)
-
-const esc = s => s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-
-function inline(s) {
-  const codes = [];
-  s = s.replace(/`([^`\n]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
-  s = esc(s)
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/(^|[^*\w])\*(?!\s)(.+?)\*(?!\w)/g, "$1<em>$2</em>")
-    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    .replace(/(^|\s)(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
-  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${esc(codes[i])}</code>`);
-}
-
-function blocks(text) {
-  const lines = text.split("\n"), out = [];
-  let i = 0;
-  while (i < lines.length) {
-    const l = lines[i];
-    if (!l.trim()) { i++; continue; }
-    let m;
-    if ((m = l.match(/^(#{1,4})\s+(.*)/))) { out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); i++; continue; }
-    if (/^(-{3,}|\*{3,})\s*$/.test(l)) { out.push("<hr>"); i++; continue; }
-    if (/^\s*>/.test(l)) {
-      const q = []; while (i < lines.length && /^\s*>/.test(lines[i])) q.push(lines[i++].replace(/^\s*>\s?/, ""));
-      out.push(`<blockquote>${blocks(q.join("\n"))}</blockquote>`); continue;
-    }
-    if (/^\s*\|.*\|\s*$/.test(l) && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1] || "")) {
-      const row = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => inline(c.trim()));
-      const head = row(l); i += 2; const body = [];
-      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) body.push(row(lines[i++]));
-      out.push(`<table><tr>${head.map(c => `<th>${c}</th>`).join("")}</tr>` +
-               body.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join("")}</tr>`).join("") + "</table>");
-      continue;
-    }
-    if ((m = l.match(/^\s*([-*+]|\d+[.)])\s+/))) {
-      const ordered = /\d/.test(m[1]), items = [];
-      while (i < lines.length && lines[i].trim()) {
-        const lm = lines[i].match(/^\s*([-*+]|\d+[.)])\s+(.*)/);
-        if (lm) items.push(lm[2]); else items[items.length - 1] += " " + lines[i].trim();
-        i++;
-      }
-      const tag = ordered ? "ol" : "ul";
-      out.push(`<${tag}>${items.map(x => `<li>${inline(x)}</li>`).join("")}</${tag}>`); continue;
-    }
-    const p = [];
-    while (i < lines.length && lines[i].trim() && !/^(#{1,4}\s|\s*>|\s*([-*+]|\d+[.)])\s)/.test(lines[i])) p.push(lines[i++]);
-    if (!p.length) p.push(lines[i++]);
-    out.push(`<p>${p.map(inline).join("<br>")}</p>`);
-  }
-  return out.join("");
-}
-
-function markdown(text) {
-  let html = "", inCode = false;
-  // split with a capture group alternates: text, lang, code-and-rest, lang, ...
-  const segs = text.split(/(^```[^\n]*$)/m);
-  for (const seg of segs) {
-    if (/^```/.test(seg)) { inCode = !inCode; html += inCode ? "<pre><code>" : "</code><button>copy</button></pre>"; continue; }
-    html += inCode ? esc(seg.replace(/^\n/, "").replace(/\n$/, "")) : blocks(seg);
-  }
-  if (inCode) html += "</code><button>copy</button></pre>";
-  return html;
 }
 
 // ---------- rendering
@@ -348,7 +298,8 @@ function addMsg(role, content, meta, images = [], sources = []) {
   } else {
     const toolCall = content.match(/<tool name="([\w-]+)">[\s\S]*?<\/tool>/);
     const visible = content.replace(/<tool name="[\w-]+">[\s\S]*?<\/tool>/, "").trim();
-    el.innerHTML = `<div class="md">${markdown(visible)}</div>` + (toolCall ? `<div class="agent-activity">Oreo Code · requested ${esc(toolCall[1].replaceAll("_", " "))}</div>` : "") + sourcesHtml(sources) + (meta ? `<div class="meta">${esc(meta)}</div>` : "");
+    el.innerHTML = `<div class="md">${markdown(visible, sources)}</div>` + (toolCall ? `<div class="agent-activity">Oreo Code · requested ${esc(toolCall[1].replaceAll("_", " "))}</div>` : "") + sourcesHtml(sources) + (meta ? `<div class="meta">${esc(meta)}</div>` : "");
+    typesetMath(el.querySelector(".md"));
   }
   $("#msgs").appendChild(el);
   return el;
@@ -449,10 +400,15 @@ const QUIPS = ["thinking", "dunking in milk", "twisting the cookie", "tuning the
 
 function sourcesHtml(list) {
   if (!list || !list.length) return "";
-  return `<div class="sources">` + list.map((s, i) => {
-    let host = s.url; try { host = new URL(s.url).hostname.replace(/^www\./, ""); } catch {}
-    return `<a href="${esc(s.url)}" target="_blank" rel="noopener" title="${esc(s.title)}">${i + 1} · ${esc(host)}</a>`;
-  }).join("") + `</div>`;
+  const links = list.flatMap((s, i) => {
+    try {
+      const url = new URL(s.url);
+      if (!['http:', 'https:'].includes(url.protocol)) return [];
+      const host = url.hostname.replace(/^www\./, "");
+      return [`<a href="${esc(url.href)}" target="_blank" rel="noopener noreferrer" title="${esc(s.title || url.href)}">${i + 1} · ${esc(host)}</a>`];
+    } catch { return []; }
+  });
+  return links.length ? `<div class="sources">${links.join("")}</div>` : "";
 }
 
 // ---------- sending
@@ -509,6 +465,7 @@ async function send() {
   const el = addMsg("assistant", "");
   el.classList.add("streaming");
   const md = el.querySelector(".md");
+  md.classList.add("streaming-plain");
   md.innerHTML = thinking(docs.length ? "reading " + (docs.length > 1 ? docs.length + " files" : "the file") : files.length ? "looking" : "thinking");
   const label = t => { const l = md.querySelector(".thinking .label"); if (l) l.textContent = t; };
   let q = 0;
@@ -563,9 +520,11 @@ async function send() {
         } else if (ev.text !== undefined) {
           quiet();
           const stick = atBottom();
-          reply += ev.text; md.innerHTML = markdown(reply);
+          if (!reply) { md.replaceChildren(); md.classList.add("streaming-plain"); }
+          reply += ev.text; md.append(document.createTextNode(ev.text));
           if (stick) scrollDown();
         } else if (ev.done) {
+          md.classList.remove("streaming-plain"); md.innerHTML = markdown(reply, sources); typesetMath(md);
           if (sources.length) el.insertAdjacentHTML("beforeend", sourcesHtml(sources));
           meta(ev.done);
         } else if (ev.error) {

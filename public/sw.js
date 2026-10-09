@@ -1,7 +1,7 @@
 // Keeps the app shell available so the installed app opens on a weak connection.
 // Only public, signed-out files are cached. /api/ and every non-GET request go
 // straight to the network, so chats and tokens never land in the cache.
-const CACHE = 'oreo-shell-v10';
+const CACHE = 'oreo-shell-v11';
 const SHELL = ['/', '/chat.js', '/markdown.js', '/preferences.js', '/voice.js', '/theme.css', '/oreo.svg', '/manifest.webmanifest', '/icon-192.png'];
 
 self.addEventListener('install', event => {
@@ -20,7 +20,7 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   const shell = url.origin === location.origin && !url.pathname.startsWith('/api/');
   // The Supabase client module comes from esm.sh; keep a copy so the page can start offline.
-  const library = url.hostname === 'esm.sh';
+  const library = url.hostname === 'esm.sh' || url.hostname === 'cdn.jsdelivr.net';
   if (!shell && !library) return;
   // Network first, so a new release shows up on the next open; the cache is only a fallback.
   event.respondWith(fetch(request).then(response => {
