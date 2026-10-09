@@ -204,15 +204,51 @@ class VoiceCommandTests(unittest.TestCase):
           };
           const { listen } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
           let transcript = '', completed = 0, error = '';
-          const cancel = listen({ onText: value => transcript = value, onDone: () => completed++, onError: value => error = value });
+          const cancel = listen({ onText: value => transcript = value, onIdle: () => completed++, onError: value => error = value });
           cancel();
           recognition.onresult({ results: [{ 0: { transcript: 'late words' } }] });
           recognition.onend();
           if (transcript || completed) throw new Error('cancelled recognition delivered a late result');
-          listen({ onText() {}, onDone() {}, onError: value => error = value });
+          listen({ onText() {}, onIdle() {}, onError: value => error = value });
           recognition.onerror({ error: 'audio-capture' });
           recognition.onend();
           if (!error.includes('No microphone')) throw new Error('microphone failure was not explained');
+        """
+        result = subprocess.run(['node', '--input-type=module', '-e', script], capture_output=True,
+                                text=True, cwd=Path(__file__).resolve().parent.parent)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_listening_keeps_going_through_pauses_until_stopped(self):
+        script = r"""
+          const { readFileSync } = await import('node:fs');
+          const source = readFileSync('./public/voice.js', 'utf8');
+          Object.defineProperty(globalThis, 'navigator', { value: { language: 'en-US' }, configurable: true });
+          const sessions = [];
+          globalThis.SpeechRecognition = class {
+            constructor() { sessions.push(this); }
+            start() { this.started = true; }
+            abort() { this.aborted = true; }
+          };
+          const { listen } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+          const said = (session, ...parts) => session.onresult({ results: parts.map(([text, isFinal]) => ({ 0: { transcript: text }, isFinal })) });
+          let text = '', idle = 0;
+          const stop = listen({ onText: value => text = value, onIdle: () => idle++, onError: e => { throw new Error(e); } });
+          if (!sessions[0].continuous) throw new Error('recognition is not continuous');
+          said(sessions[0], ['Tell me about', false]);
+          if (text !== 'Tell me about') throw new Error('interim words not shown: ' + text);
+          said(sessions[0], ['Tell me about the', true]);
+          sessions[0].onend();                         // the browser ends a session after a pause
+          if (sessions.length !== 2 || !sessions[1].started) throw new Error('listening stopped at a pause');
+          said(sessions[1], ['history of Rome', true]);
+          if (text !== 'Tell me about the history of Rome') throw new Error('words were not joined: ' + text);
+          stop();
+          sessions[1].onend();
+          said(sessions[1], ['late', true]);
+          if (sessions.length !== 2 || text.includes('late')) throw new Error('listening continued after stop');
+          // Long silence pauses by itself after three empty sessions.
+          listen({ onText() {}, onIdle: () => idle++, onError() {} });
+          for (let i = 2; i < 5; i++) sessions[i].onend();
+          if (idle !== 1 || sessions.length !== 5) throw new Error('silence did not pause listening');
         """
         result = subprocess.run(['node', '--input-type=module', '-e', script], capture_output=True,
                                 text=True, cwd=Path(__file__).resolve().parent.parent)

@@ -1,6 +1,6 @@
 // Voice chat with the browser's own speech engines: no API key, no extra server calls.
 // Chrome, Edge and Safari (including iPhone) support recognition; Firefox does not,
-// so the mic button stays hidden there.
+// so the mic button is disabled there.
 const Recognition = globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition;
 export const voiceSupported = !!Recognition;
 
@@ -19,20 +19,42 @@ export function command(text) {
   return COMMANDS.find(([, pattern]) => pattern.test(said))?.[0] || null;
 }
 
-// Listens for one utterance. Calls onText with the words so far and onDone with the final text.
-export function listen({ onText, onDone, onError }) {
-  const recognition = new Recognition();
-  recognition.lang = navigator.language || 'en-US';
-  recognition.interimResults = true;
-  recognition.continuous = false;
-  let text = '', failed = false, cancelled = false;
-  recognition.onresult = event => {
-    if (cancelled || failed) return;
-    text = [...event.results].map(result => result[0].transcript).join('').trim();
-    onText(text);
+const join = (...parts) => parts.map(part => part.trim()).filter(Boolean).join(' ');
+
+// Keeps listening through pauses until the returned stop() is called, so a sentence
+// is never cut off. Browsers end a recognition session after a short silence, so a
+// new one starts at once and its words are added on. onText always receives
+// everything heard so far. After a few silent sessions in a row, onIdle is called
+// so the mic is not left on by accident.
+export function listen({ onText, onIdle, onError, silentRestarts = 3 }) {
+  let heard = '', failed = false, stopped = false, silent = 0, recognition;
+  const begin = () => {
+    recognition = new Recognition();
+    recognition.lang = navigator.language || 'en-US';
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    let session = '', spoke = false;
+    recognition.onresult = event => {
+      if (stopped || failed) return;
+      let final = '', interim = '';
+      for (const result of event.results) {
+        if (result.isFinal) final += result[0].transcript; else interim += result[0].transcript;
+      }
+      session = final; spoke = true;
+      onText(join(heard, final, interim));
+    };
+    recognition.onerror = onerror;
+    recognition.onend = () => {
+      heard = join(heard, session);
+      if (stopped || failed) return;
+      silent = spoke ? 0 : silent + 1;
+      if (silent >= silentRestarts) { stopped = true; onIdle(heard); return; }
+      try { begin(); } catch { failed = true; onError('Microphone is unavailable. Check browser permissions and try again.'); }
+    };
+    recognition.start();
   };
-  recognition.onerror = event => {
-    if (cancelled || failed) return;
+  const onerror = event => {
+    if (stopped || failed) return;
     if (event.error === 'aborted') return;
     if (event.error === 'no-speech') return;
     failed = true;
@@ -45,10 +67,9 @@ export function listen({ onText, onDone, onError }) {
     };
     onError(messages[event.error] || 'Could not hear that. Check your microphone and try again.');
   };
-  // Cancelling still fires onend; it must not send the half-finished sentence.
-  recognition.onend = () => { if (!failed && !cancelled) onDone(text); };
-  recognition.start();
-  return () => { cancelled = true; try { recognition.abort(); } catch {} };
+  begin();
+  // Stopping drops anything still arriving, so a late word never refills a sent box.
+  return () => { stopped = true; try { recognition.abort(); } catch {} };
 }
 
 // Markdown reads badly aloud, so speak the plain words and skip code blocks.

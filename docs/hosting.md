@@ -12,11 +12,14 @@ Requests containing images use Claude when a non-Claude model was selected.
 Web results have citations; unavailable search results produce an explicit notice.
 
 Voice chat uses the browser's own speech recognition and speech output, so it
-needs no key and adds no server calls. The Voice button sends what you say and
-reads the answer aloud; tap it again to cancel or stop. Saying "new chat", "turn
-web on/off", "open settings", "read that again" or "stop" runs that action
-instead of sending it (`public/voice.js`). Firefox has no recognition, so the
-button is hidden there.
+needs no key and adds no server calls. The mic types what you say and keeps
+listening through pauses; tap it again to pause, then type or tap to add more.
+Nothing is sent until Enter or the send button, and the answer to a spoken
+message is read aloud (tap the mic to stop it). After about three silent
+recognition sessions the mic pauses itself. Sending "new chat", "turn web
+on/off", "open settings", "read that again" or "stop" by voice runs that action
+instead (`public/voice.js`). Firefox has no recognition, so the button is
+disabled there.
 
 Oreo installs as an app on phones, tablets and computers. Chrome, Edge and
 Android show an Install button in the sidebar. iPhone and iPad never offer that

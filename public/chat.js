@@ -257,14 +257,16 @@ async function send() {
     }
   } finally { clearTimeout(paint); replyEl.classList.remove('streaming'); busy = false; tray(); controls(); if (ready && expected === epoch) composer.focus(); }
 }
-$('#send').onclick = send;
-$('#composer').onsubmit = event => { event.preventDefault(); void send(); };
+$('#send').onclick = () => void submit();
+$('#composer').onsubmit = event => { event.preventDefault(); void submit(); };
 $('#new-chat').onclick = newChat;
 $('#attach').onclick = () => $('#pick').click();
 $('#pick').onchange = event => { void addFiles([...event.target.files]); event.target.value = ''; };
 $('#web').onclick = () => { web = !web; syncWebButton(); };
-// Voice: the mic sends what you say, runs a few spoken commands, and reads the answer aloud.
-let stopListening = null;
+// Voice: the mic types what you say until you tap it again to pause. Nothing is sent
+// until Enter or the send button, so long sentences and later edits are safe. A spoken
+// message gets its answer read aloud, and a spoken command runs instead of being sent.
+let stopListening = null, spokenDraft = false;
 const voiceAvailable = voiceSupported && globalThis.isSecureContext !== false;
 if (!voiceAvailable) {
   $('#mic').title = 'Voice input is not available here. Use a secure page in a recent Chrome, Edge, or Safari.';
@@ -272,43 +274,49 @@ if (!voiceAvailable) {
 }
 const micState = state => {
   $('#mic').dataset.state = state; $('#mic').classList.toggle('on', state !== 'idle'); $('#mic').setAttribute('aria-pressed', String(state !== 'idle'));
-  $('#mic').title = { idle: 'Talk to Oreo', listening: 'Listening. Tap to cancel.', speaking: 'Speaking. Tap to stop.' }[state]; $('#mic').setAttribute('aria-label', $('#mic').title);
+  $('#mic').title = { idle: 'Talk to Oreo', listening: 'Listening. Tap to pause.', speaking: 'Speaking. Tap to stop.' }[state]; $('#mic').setAttribute('aria-label', $('#mic').title);
 };
 const answerAloud = text => { micState('speaking'); speak(text, () => micState('idle')); };
 const announce = text => { notify(text); answerAloud(text); };
 function runCommand(action) {
   if (action === 'new-chat') { newChat(); announce('Started a new chat.'); }
-  else if (action === 'web-on' || action === 'web-off') { web = action === 'web-on'; $('#web').classList.toggle('on', web); $('#web').setAttribute('aria-pressed', String(web)); announce(web ? 'Web search is on.' : 'Web search is off.'); }
+  else if (action === 'web-on' || action === 'web-off') { web = action === 'web-on'; syncWebButton(); announce(web ? 'Web search is on.' : 'Web search is off.'); }
   else if (action === 'settings') { notify(''); $('#open-settings').click(); }
   else if (action === 'repeat') { const last = [...timeline.querySelectorAll('.assistant .md')].pop(); if (last) answerAloud(last.textContent); else announce('There is no answer to read yet.'); }
   else { stopSpeaking(); micState('idle'); notify(''); }
 }
-async function voiceTurn(text, before) {
-  const action = command(text);
-  if (action) { composer.value = before; composer.oninput(); runCommand(action); return; }
-  if ($('#send').disabled) return;
+function pauseListening(message) {
+  if (!stopListening) return;
+  stopListening(); stopListening = null; micState('idle'); notify(message);
+}
+// Every way of sending goes through here, so a spoken draft is handled the same way.
+async function submit() {
+  const spoken = spokenDraft && !pending.length;
+  const action = spoken ? command(composer.value) : null;
+  if (action) { pauseListening(''); spokenDraft = false; composer.value = ''; composer.oninput(); runCommand(action); return; }
+  if (spoken) stopSpeaking();
   const reply = await send();
-  if (reply) answerAloud(reply);
+  if (reply) { spokenDraft = false; if (spoken) answerAloud(reply); }
 }
 $('#mic').classList.remove('hidden');
-let draftBeforeVoice = '';
 $('#mic').onclick = () => {
   if (speaking() || $('#mic').dataset.state === 'speaking') { stopSpeaking(); micState('idle'); return; }
-  if (stopListening) { stopListening(); stopListening = null; composer.value = draftBeforeVoice; composer.oninput(); micState('idle'); notify(''); return; }
-  const before = draftBeforeVoice = composer.value.trim();
-  micState('listening'); notify('Listening…');
+  if (stopListening) { pauseListening('Paused. Tap the mic to keep talking, or press Enter to send.'); composer.focus(); return; }
+  // Resuming adds to whatever is in the box now, including anything typed while paused.
+  const before = composer.value.trim();
+  micState('listening'); notify('Listening. Tap the mic to pause, or press Enter to send.');
   try {
     stopListening = listen({
-      onText: text => { composer.value = (before ? before + ' ' : '') + text; composer.oninput(); },
-      onDone: text => { stopListening = null; micState('idle'); notify(text ? '' : "Didn't catch that. Tap the mic and try again."); if (text) void voiceTurn(text, before); },
+      onText: text => { composer.value = (before ? before + ' ' : '') + text; composer.oninput(); if (text) spokenDraft = true; },
+      onIdle: () => { stopListening = null; micState('idle'); notify('Paused after a long silence. Tap the mic to keep talking, or press Enter to send.'); },
       onError: message => { stopListening = null; micState('idle'); notify(message); },
     });
   } catch {
     stopListening = null; micState('idle'); notify('Microphone is unavailable. Check browser permissions and try again.');
   }
 };
-composer.oninput = () => { composer.style.height = 'auto'; composer.style.height = Math.min(composer.scrollHeight, 220) + 'px'; controls(); };
-composer.onkeydown = event => { if (preferences.enter && event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void send(); } };
+composer.oninput = () => { if (!composer.value.trim()) spokenDraft = false; composer.style.height = 'auto'; composer.style.height = Math.min(composer.scrollHeight, 220) + 'px'; controls(); };
+composer.onkeydown = event => { if (preferences.enter && event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void submit(); } };
 composer.onpaste = event => { if (event.clipboardData.files.length) { event.preventDefault(); void addFiles([...event.clipboardData.files]); } };
 document.addEventListener('dragover', event => { if (ready && [...event.dataTransfer.types].includes('Files')) event.preventDefault(); });
 document.addEventListener('drop', event => { if (ready && event.dataTransfer.files.length) { event.preventDefault(); void addFiles([...event.dataTransfer.files]); } });
