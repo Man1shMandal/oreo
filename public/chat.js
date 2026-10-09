@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { markdown } from './markdown.js';
+import { markdown, typesetMath } from './markdown.js';
 import { preferences, loadPreferences, installSettings } from './preferences.js';
 import { voiceSupported, listen, command, speak, stopSpeaking, speaking } from './voice.js';
 
@@ -69,7 +69,7 @@ function message(row) {
       if (file.preview) { const image = document.createElement('img'); image.src = file.preview; image.alt = file.name; el.append(image); }
     }
   } else {
-    const body = document.createElement('div'); body.className = 'md'; body.innerHTML = markdown(value.text); el.append(body);
+    const body = document.createElement('div'); body.className = 'md'; body.innerHTML = markdown(value.text, value.sources); el.append(body); typesetMath(body);
     sourceLinks(el, value.sources);
   }
   return el;
@@ -228,7 +228,7 @@ async function send() {
     if (expected !== epoch) return;
     if (!done) throw new Error('The connection ended before the reply was saved. Refresh this chat before retrying.');
     clearTimeout(paint); reply = done.reply; paintReply();
-    replyBody.classList.remove('streaming-plain'); replyBody.innerHTML = markdown(reply);
+    replyBody.classList.remove('streaming-plain'); replyBody.innerHTML = markdown(reply, done.sources); typesetMath(replyBody);
     sourceLinks(replyEl, done.sources);
     if (done.model !== $('#model').value) { const note = document.createElement('div'); note.className = 'meta'; note.textContent = 'Used a vision model for this image.'; replyEl.append(note); }
     chatId = done.conversation_id; rows.push(outgoing, { role: 'assistant', content: { text: reply, sources: done.sources } });
