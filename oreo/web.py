@@ -146,6 +146,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200, MARKDOWN.read_bytes(), "text/javascript; charset=utf-8")
             if method == "GET" and path == "/mascot.js":
                 return self.send(200, MASCOT.read_bytes(), "text/javascript; charset=utf-8")
+            if method == "GET" and path == "/mascot-anime.webp":
+                return self.send(200, MASCOT.with_name("mascot-anime.webp").read_bytes(), "image/webp")
             if parts[0] != "api" or len(parts) < 2:
                 return self.send(404, {"error": "not found"})
             fn = getattr(self, f"{method.lower()}_{parts[1]}", None)

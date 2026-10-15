@@ -42,7 +42,8 @@ main { background: #000; }
 oreo-mascot.oreo-character { display: inline-grid; flex: none; width: 58px; height: 58px; place-items: center; }
 oreo-mascot.desktop-character { margin: -5px 0 -5px 1px; }
 oreo-mascot.mobile-character { display: none; }
-oreo-mascot.signin-character { width: 82px; height: 82px; }
+.mobile-head oreo-mascot { width: 44px; height: 44px; }
+oreo-mascot.signin-character { width: 106px; height: 106px; }
 .top-actions { gap: 6px; }
 #model { max-width: 180px; padding: 7px 25px 7px 11px; border: 0; appearance: none; background: transparent; color: #d0d0d4; font-size: 12px; cursor: pointer; }
 #model:hover, #model:focus { color: #fff; }

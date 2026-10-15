@@ -415,3 +415,20 @@ chat was read or changed. Production /api/health returns ok; production browser
 shows sign-in, so authenticated production chat remains untested.
 
 Next: push this release and verify CI, deployment and public assets.
+
+## 2026-10-15 — Detailed adult anime portrait
+
+Inspected worktree-web-ui at f1e8ac6, matching origin/main. Replaced the small
+vector cartoon with an original generated adult anime heroine: lavender hair,
+violet eyes, black evening dress and silver jewelry. Used built-in imagegen;
+optimized its transparent output to a 512px WebP (92,158 bytes). The shared
+custom element retains gentle idle, attentive, working and celebration motion,
+with reduced-motion support; individual eye blinking is no longer simulated.
+Added explicit local/hosted image routes and offline shell v14. Phone portrait
+is 44px to stay inside the header; sign-in portrait is 106px.
+
+Validation: 78 Python tests and 6 Node tests pass; JS syntax, Python compilation
+and diff whitespace checks pass. Browser preview verifies the image decodes at
+512px, transparency, desktop/390px phone appearance, and no missing portrait.
+No provider changes or model calls. Preserve unrelated instructions and earlier
+uncommitted state entries. Next: push and verify deployed portrait and CI.

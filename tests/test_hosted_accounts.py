@@ -89,6 +89,7 @@ class InstallableAppTests(unittest.TestCase):
     def test_app_files_are_served_with_their_types(self):
         for path, kind in (('/manifest.webmanifest', 'application/manifest+json'), ('/sw.js', 'text/javascript; charset=utf-8'),
                            ('/mascot.js', 'text/javascript; charset=utf-8'),
+                           ('/mascot-anime.webp', 'image/webp'),
                            ('/theme.css', 'text/css; charset=utf-8'),
                            ('/icon-192.png', 'image/png'), ('/icon-512.png', 'image/png'),
                            ('/icon-maskable-512.png', 'image/png'), ('/apple-touch-icon.png', 'image/png')):
@@ -119,8 +120,8 @@ class InstallableAppTests(unittest.TestCase):
         self.assertIn('import \'./mascot.js\';', script)
         mascot = (root / 'public' / 'mascot.js').read_text()
         self.assertIn("customElements.define('oreo-mascot'", mascot)
-        self.assertIn('class="iris"', mascot)
-        self.assertIn('class="smile"', mascot)
+        self.assertIn('src="/mascot-anime.webp"', mascot)
+        self.assertIn('alt=""', mascot)
         self.assertIn('prefers-reduced-motion: reduce', mascot)
         self.assertIn("document.querySelectorAll('.oreo-character')", script)
         self.assertIn("eye.classList.toggle('working', active)", script)

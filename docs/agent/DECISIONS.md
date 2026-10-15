@@ -158,3 +158,9 @@ Live ABB checks returned empty streamed Haiku answers but successful ordinary
 Haiku and Sonnet answers. After two empty streams, use one ordinary completion
 and deliver it through the existing SSE events. Bound each request to 60 seconds
 so three attempts fit the hosted function limit. Never retry a partial answer.
+
+## 2026-10-15 — Illustrated adult anime heroine
+The user requested a stronger anime look and a more alluring character. Use an
+original clearly adult illustrated portrait rather than the simplistic vector.
+Keep transparency, a small optimized WebP and gentle whole-portrait motion;
+respect reduced motion and serve the same asset in local and hosted apps.
