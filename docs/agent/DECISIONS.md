@@ -146,3 +146,15 @@ records, key by a SHA-256 token digest, and cap expiry at the JWT's `exp` claim.
 This removes repeat auth network hops during quick follow-ups while limiting
 how long a revoked session can benefit from a warm cache. A fresh token always
 goes to Supabase for verification.
+
+## 2026-10-15 — Full anime-inspired character
+Supersedes the eye-only character decision: the user requested a beautiful
+anime-inspired girl. Keep the shared vector custom element, with an original
+lavender-haired portrait, violet eyes, restrained animation, and reduced-motion
+support in local and hosted headers.
+
+## 2026-10-15 — Recover empty streams with an ordinary completion
+Live ABB checks returned empty streamed Haiku answers but successful ordinary
+Haiku and Sonnet answers. After two empty streams, use one ordinary completion
+and deliver it through the existing SSE events. Bound each request to 60 seconds
+so three attempts fit the hosted function limit. Never retry a partial answer.

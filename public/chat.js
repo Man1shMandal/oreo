@@ -250,6 +250,9 @@ async function send() {
       if (event.conversation_id) receivedChat = event.conversation_id;
       if (event.error) throw new Error(event.error);
       if (event.status) notify(event.status);
+      if (event.reset) {
+        reply = ""; displayedLength = 0; streamText.textContent = "";
+      }
       if (event.text) {
         reply += event.text;
         if (paint === null) paint = setTimeout(paintReply, 40);

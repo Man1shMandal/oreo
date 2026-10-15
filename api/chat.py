@@ -26,7 +26,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 @lru_cache(maxsize=2)
 def provider_client(api_key):
     return OpenAI(api_key=api_key, base_url="https://api.abby.abb.com/api/v1/developers",
-                  timeout=120, max_retries=0)
+                  timeout=60, max_retries=0)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -157,21 +157,37 @@ class handler(BaseHTTPRequestHandler):
             if any(isinstance(m["content"], list) for m in messages) and not model.startswith("claude"):
                 model = config.VISION_MODEL
             client = provider_client(os.environ["ABBY_API_KEY"])
-            if wants_stream:
-                self.event({"status": "Waiting for the model…"})
-                chunks = client.chat.completions.create(model=model, messages=messages,
-                    temperature=preferences["temperature"], stream=True)
-                pieces = []
-                for chunk in chunks:
-                    if chunk.choices and chunk.choices[0].delta.content:
-                        piece = chunk.choices[0].delta.content
-                        pieces.append(piece)
-                        self.event({"text": piece})
-                reply = "".join(pieces)
-            else:
-                completion = client.chat.completions.create(model=model, messages=messages,
-                    temperature=preferences["temperature"])
-                reply = completion.choices[0].message.content
+            reply = ""
+            for attempt in range(3):
+                self.event({"status": "Waiting for the model…" if attempt == 0
+                            else "Trying another way to get your answer…"})
+                if wants_stream and attempt < 2:
+                    chunks = client.chat.completions.create(model=model, messages=messages,
+                        temperature=preferences["temperature"], stream=True)
+                    pieces = []
+                    try:
+                        for chunk in chunks:
+                            if chunk.choices and chunk.choices[0].delta.content:
+                                piece = chunk.choices[0].delta.content
+                                pieces.append(piece)
+                                self.event({"text": piece})
+                    finally:
+                        close = getattr(chunks, "close", None)
+                        if close:
+                            close()
+                    reply = "".join(pieces)
+                    if reply.strip():
+                        break
+                    # Discard whitespace before a fresh attempt in the browser too.
+                    self.event({"reset": True})
+                else:
+                    completion = client.chat.completions.create(model=model, messages=messages,
+                        temperature=preferences["temperature"])
+                    reply = completion.choices[0].message.content if completion.choices else ""
+                    if reply and reply.strip():
+                        if wants_stream:
+                            self.event({"text": reply})
+                        break
             if not reply or not reply.strip():
                 self.reply(502, {"error": "Oreo returned no answer. Try again shortly.", "conversation_id": chat_id})
                 return

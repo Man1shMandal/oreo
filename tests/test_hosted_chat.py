@@ -101,6 +101,57 @@ class HostedChatTests(unittest.TestCase):
         self.assertEqual(self.post({'message': 'hello'})[0], 502)
         self.save.assert_not_called()
 
+    def test_empty_completion_retries_before_saving(self):
+        create = self.client.return_value.chat.completions.create
+        create.side_effect = [
+            SimpleNamespace(choices=[]),
+            SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content='hello back'))]),
+        ]
+        self.assertEqual(self.post({'message': 'hello'})[0], 200)
+        self.assertEqual(create.call_count, 2)
+        self.save.assert_called_once_with(USER, CHAT, 'hello', 'hello back')
+
+    def stream_events(self):
+        request = urllib.request.Request(
+            f'http://127.0.0.1:{self.server.server_port}/api/chat',
+            data=json.dumps({'message': 'hello', 'stream': True}).encode(),
+            headers={'Authorization': 'Bearer test'},
+        )
+        with urllib.request.urlopen(request) as response:
+            return [json.loads(line[6:]) for line in response.read().decode().splitlines()
+                    if line.startswith('data: ')]
+
+    def test_empty_stream_retries_and_saves_one_answer(self):
+        create = self.client.return_value.chat.completions.create
+        create.side_effect = [iter([]), iter([SimpleNamespace(
+            choices=[SimpleNamespace(delta=SimpleNamespace(content='hello back'))])])]
+        events = self.stream_events()
+        self.assertEqual(create.call_count, 2)
+        self.assertTrue(any(event.get('reset') for event in events))
+        self.assertEqual(events[-1]['reply'], 'hello back')
+        self.assertTrue(events[-1]['done'])
+        self.save.assert_called_once_with(USER, CHAT, 'hello', 'hello back')
+
+    def test_empty_streams_fall_back_to_ordinary_completion(self):
+        create = self.client.return_value.chat.completions.create
+        create.side_effect = [iter([]), iter([]), SimpleNamespace(choices=[
+            SimpleNamespace(message=SimpleNamespace(content='fallback answer'))])]
+        events = self.stream_events()
+        self.assertEqual(create.call_count, 3)
+        self.assertNotIn('stream', create.call_args.kwargs)
+        self.assertEqual([e['text'] for e in events if 'text' in e], ['fallback answer'])
+        self.assertEqual(events[-1]['reply'], 'fallback answer')
+        self.save.assert_called_once_with(USER, CHAT, 'hello', 'fallback answer')
+
+    def test_exhausted_empty_streams_report_error_and_release(self):
+        create = self.client.return_value.chat.completions.create
+        create.side_effect = [iter([]), iter([]), SimpleNamespace(choices=[])]
+        events = self.stream_events()
+        self.assertEqual(create.call_count, 3)
+        self.assertIn('error', events[-1])
+        self.save.assert_not_called()
+        self.release.assert_called_once_with(USER, CHAT)
+
     def test_model_failure_is_not_saved(self):
         self.client.return_value.chat.completions.create.side_effect = RuntimeError('upstream')
         self.assertEqual(self.post({'message': 'hello'})[0], 500)

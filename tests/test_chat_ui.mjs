@@ -62,6 +62,18 @@ test('stream batches rendering and unlocks send without account round trips', as
   assert.equal(h.html(), 'Final reply');
 });
 
+test('empty-stream reset replaces whitespace with the recovered answer', async () => {
+  const h = harness([
+    { text: '   ' }, { reset: true }, { text: 'Recovered answer' },
+    { done: true, conversation_id: 'chat-1', reply: 'Recovered answer', model: 'haiku' },
+  ]);
+  await h.sandbox.send();
+  assert.equal(h.sandbox.rows[1].content.text, 'Recovered answer');
+  assert.equal(h.html(), 'Recovered answer');
+  assert.equal(h.sandbox.busy, false);
+  assert.equal(h.timers.size, 0);
+});
+
 test('stream errors restore the draft and cancel pending paints', async () => {
   const h = harness([{ text: 'partial' }, { error: 'Save failed' }]);
   await h.sandbox.send();

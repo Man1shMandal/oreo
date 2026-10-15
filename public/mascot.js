@@ -1,32 +1,38 @@
 const artwork = `
-<svg class="mascot" viewBox="0 0 120 76" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg">
+<svg class="mascot" viewBox="0 0 120 120" role="presentation" focusable="false" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="iris" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#9ce8f5"/><stop offset=".36" stop-color="#4baedc"/><stop offset="1" stop-color="#5367c9"/>
-    </linearGradient>
-    <linearGradient id="lid" x1="0" y1="0" x2="0" y2="1">
-      <stop stop-color="#eaf9ff"/><stop offset="1" stop-color="#c9e8f3"/>
-    </linearGradient>
-    <clipPath id="left-eye"><path d="M8 36C17 20 34 18 52 34C42 49 23 52 8 36Z"/></clipPath>
-    <clipPath id="right-eye"><path d="M68 34C86 18 103 20 112 36C97 52 78 49 68 34Z"/></clipPath>
+    <linearGradient id="hair" x2=".8" y2="1"><stop stop-color="#363354"/><stop offset=".5" stop-color="#797298"/><stop offset="1" stop-color="#c6b6d9"/></linearGradient>
+    <linearGradient id="skin" x2="0" y2="1"><stop stop-color="#fff0e6"/><stop offset="1" stop-color="#efc5bd"/></linearGradient>
+    <linearGradient id="iris" x2="0" y2="1"><stop stop-color="#382c68"/><stop offset=".6" stop-color="#9d84cf"/><stop offset="1" stop-color="#d8c6f4"/></linearGradient>
   </defs>
   <g class="eye-pair">
+    <path d="M24 94C12 64 15 25 40 14C67 0 96 18 100 47L103 99L82 110H35Z" fill="url(#hair)" stroke="#39344d" stroke-width="1.4"/>
+    <path d="M24 118Q26 96 47 94H74Q95 98 97 118" fill="#282838"/>
+    <path d="M51 84V97L60 105L70 97V84" fill="url(#skin)"/>
+    <path d="M46 95L60 105L52 116L39 99M74 95L60 105L68 116L81 99" fill="#eee8f5"/>
+    <path d="M57 105L52 115L60 112L68 115L63 105" fill="#9a83bc"/>
+    <path d="M31 46Q27 77 42 87Q60 103 79 85Q91 73 88 44Q62 24 31 46Z" fill="url(#skin)" stroke="#c7989b" stroke-width=".7"/>
+    <path d="M32 65Q25 57 27 70Q28 77 35 77M87 65Q96 57 93 70Q92 77 85 77" fill="#efc5bd"/>
+    <path d="M38 54Q45 50 51 54M68 54Q76 50 82 54" fill="none" stroke="#79617b" stroke-width="1.4" stroke-linecap="round"/>
     <g class="eye left-eye">
-      <path class="white" d="M8 36C17 20 34 18 52 34C42 49 23 52 8 36Z" fill="url(#lid)"/>
-      <g clip-path="url(#left-eye)"><circle class="iris" cx="31" cy="36" r="12" fill="url(#iris)"/><circle class="pupil" cx="32" cy="35" r="6.1" fill="#17234f"/><ellipse cx="27" cy="30" rx="3.5" ry="2.4" fill="#fff" opacity=".96"/><circle cx="37" cy="40" r="1.8" fill="#aaf6f1"/><circle cx="23" cy="39" r="1.4" fill="#8ce4ef"/></g>
-      <path class="upper-lid" d="M7 36C16 19 35 16 54 33C41 24 24 24 8 39Z" fill="#172044"/>
-      <path d="M17 26C24 20 36 20 44 25" fill="none" stroke="#fff" stroke-opacity=".48" stroke-width="1.2" stroke-linecap="round"/>
-      <path d="M14 45l-3 3m8-1-2 4" fill="none" stroke="#28345d" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M35 63Q43 55 53 63L51 71Q42 76 36 69Z" fill="#fff9fa"/>
+      <ellipse class="iris" cx="45" cy="65" rx="6" ry="8" fill="url(#iris)"/>
+      <ellipse cx="45" cy="64" rx="2.8" ry="5" fill="#302440"/><circle cx="43" cy="61" r="2.4" fill="white"/><circle cx="48" cy="68" r="1.2" fill="white"/>
+      <path d="M33 60L36 63Q43 56 53 63M34 64L32 62" fill="none" stroke="#372c44" stroke-width="2.3" stroke-linecap="round"/>
     </g>
     <g class="eye right-eye">
-      <path class="white" d="M68 34C86 18 103 20 112 36C97 52 78 49 68 34Z" fill="url(#lid)"/>
-      <g clip-path="url(#right-eye)"><circle class="iris" cx="89" cy="36" r="12" fill="url(#iris)"/><circle class="pupil" cx="88" cy="35" r="6.1" fill="#17234f"/><ellipse cx="84" cy="30" rx="3.5" ry="2.4" fill="#fff" opacity=".96"/><circle cx="94" cy="40" r="1.8" fill="#aaf6f1"/><circle cx="81" cy="39" r="1.4" fill="#8ce4ef"/></g>
-      <path class="upper-lid" d="M66 33C85 16 104 19 113 36L112 39C96 24 79 24 66 33Z" fill="#172044"/>
-      <path d="M76 25C84 20 96 20 103 26" fill="none" stroke="#fff" stroke-opacity=".48" stroke-width="1.2" stroke-linecap="round"/>
-      <path d="M106 45l3 3m-8-1 2 4" fill="none" stroke="#28345d" stroke-width="1.7" stroke-linecap="round"/>
+      <path d="M67 63Q77 55 85 63L84 69Q78 76 69 71Z" fill="#fff9fa"/>
+      <ellipse class="iris" cx="75" cy="65" rx="6" ry="8" fill="url(#iris)"/>
+      <ellipse cx="75" cy="64" rx="2.8" ry="5" fill="#302440"/><circle cx="73" cy="61" r="2.4" fill="white"/><circle cx="78" cy="68" r="1.2" fill="white"/>
+      <path d="M67 63Q77 56 84 63L87 60M86 64L88 62" fill="none" stroke="#372c44" stroke-width="2.3" stroke-linecap="round"/>
     </g>
-    <path class="smile" d="M53 59Q60 65 67 59" fill="none" stroke="#c7d9ff" stroke-width="2.2" stroke-linecap="round"/>
-    <path class="smile-glint" d="M56 59Q60 62 64 59" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="1" stroke-linecap="round"/>
+    <ellipse cx="39" cy="77" rx="6" ry="2.7" fill="#e99ba9" opacity=".45"/><ellipse cx="81" cy="77" rx="6" ry="2.7" fill="#e99ba9" opacity=".45"/>
+    <path d="M60 70L58 77H61" fill="none" stroke="#cf9f9e" stroke-width="1" stroke-linecap="round"/>
+    <path class="smile" d="M55 83Q60 87 65 83" fill="none" stroke="#a9617a" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M25 61Q20 30 42 20Q73 5 90 34L92 68Q82 54 76 32Q61 49 43 51L55 34Q39 50 25 61Z" fill="url(#hair)"/>
+    <path d="M35 30Q52 15 72 22M29 43Q32 36 36 33M81 37L86 52" fill="none" stroke="#d6c8eb" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/>
+    <path d="M27 55Q22 82 34 102L40 95Q31 76 36 52M88 49Q99 79 86 104L80 96Q89 77 83 48" fill="url(#hair)"/>
+    <path d="M83 42L89 38L94 44L88 49Z" fill="#e8d9ff"/><circle cx="88" cy="44" r="2" fill="#b79bd4"/>
   </g>
 </svg>`;
 

@@ -390,3 +390,28 @@ tests, 3 Node chat UI tests, JavaScript syntax, and `git diff --check` pass.
 Released in commit `854e876` to `origin/main`; GitHub verification run
 `37802179016` passed. Production serves the smile and idle styles, and
 `/api/health` returns ok.
+
+## 2026-10-15 — Empty-answer recovery and anime character
+
+Inspected worktree-web-ui at f266619, matching origin/main. Preserved existing
+unrelated instruction files, .venv, and earlier uncommitted STATE.md entries.
+Live tests reproduced three empty Haiku streams, while ordinary Haiku and
+Sonnet completions both returned "Oreo works". Hosted chat now tries streaming
+twice, then uses an ordinary completion if both streams are empty. Retry status
+and whitespace resets reach the UI; streams close and empty answers never save.
+Provider timeout is 60 seconds per attempt to fit the 300-second hosted limit.
+No replay of exceptions or partial answers. Replaced the eye-only shared SVG
+with an original anime-inspired girl portrait, lavender hair and violet eyes;
+retained state animations and reduced-motion support. Bumped shell cache to v13.
+
+Validation before push: 78 Python tests and 6 Node tests pass; all public JS
+syntax checks, Python compileall and git diff --check pass. New tests exercise
+stream retry, ordinary fallback, exhaustion, completion retry and browser reset.
+Browser preview verified desktop portrait, phone visibility at 390px with no
+horizontal overflow, Settings open/close, and simulated streamed answer recovery.
+The actual updated endpoint with live ABB provider and stubbed auth/storage
+returned "Oreo works", done=true, and saved exactly once to the stub. No private
+chat was read or changed. Production /api/health returns ok; production browser
+shows sign-in, so authenticated production chat remains untested.
+
+Next: push this release and verify CI, deployment and public assets.
