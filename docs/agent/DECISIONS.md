@@ -164,3 +164,10 @@ The user requested a stronger anime look and a more alluring character. Use an
 original clearly adult illustrated portrait rather than the simplistic vector.
 Keep transparency, a small optimized WebP and gentle whole-portrait motion;
 respect reduced motion and serve the same asset in local and hosted apps.
+
+## 2026-10-17 — Project positioning
+Describe Oreo as an applied AI engineering initiative exploring how to build
+world-class intelligent systems, built on the latest LLMs. The user explicitly
+rejects the old personal-assistant label and provider/API names in project
+branding. Use “built on the latest LLMs” in public descriptions. This supersedes
+earlier branding guidance; retain accurate technical configuration details.

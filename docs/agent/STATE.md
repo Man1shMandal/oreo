@@ -432,3 +432,13 @@ and diff whitespace checks pass. Browser preview verifies the image decodes at
 512px, transparency, desktop/390px phone appearance, and no missing portrait.
 No provider changes or model calls. Preserve unrelated instructions and earlier
 uncommitted state entries. Next: push and verify deployed portrait and CI.
+
+## 2026-10-17 — Project description
+
+Inspected worktree-web-ui at f92ac42, matching origin/main. Updated and verified
+the GitHub repository description, README and app manifest to position Oreo as
+an applied AI engineering initiative built on the latest LLMs. Removed the old
+label from assistant prompts and recorded the enduring wording preference in
+DECISIONS.md. Preserved existing unrelated instruction and state changes.
+Validation: JSON parsing, Python AST parsing, and git diff --check pass.
+No behavior changes or model calls.
