@@ -1,7 +1,7 @@
 {
   "name": "Oreo",
   "short_name": "Oreo",
-  "description": "A small personal AI.",
+  "description": "An applied AI engineering initiative, built on the latest LLMs.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

@@ -1,6 +1,6 @@
 # Oreo
 
-My personal AI in the terminal, running on the AI API (Claude, GPT and Gemini).
+An applied AI engineering initiative exploring how to build world-class intelligent systems, built on the latest LLMs.
 
 ## Run
 

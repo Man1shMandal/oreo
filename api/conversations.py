@@ -10,7 +10,7 @@ from api.context import select_history
 from api.network import request_json
 
 
-SYSTEM_PROMPT = "You are Oreo, a personal AI assistant. Be direct and useful. No emoji. Do not add creator attribution to replies."
+SYSTEM_PROMPT = "You are Oreo, an AI assistant. Be direct and useful. No emoji. Do not add creator attribution to replies."
 
 
 def conversation_id(value):
