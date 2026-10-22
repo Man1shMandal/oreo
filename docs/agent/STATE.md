@@ -16,7 +16,13 @@ Validation: 81 Python tests, 6 Node tests, Python compilation, mascot syntax,
 and diff whitespace checks pass. Portfolio browser layout verified. Existing
 unrelated instruction and state changes remain unstaged. The user explicitly approved the production credential migration after automatic
 approval review requested it. Neutral production variables are configured and
-the protected temporary export was deleted. Oreo release verification follows.
+the protected temporary export was deleted. Released as `ba15329` to
+`origin/main`. GitHub run `39719653712` passed. Production deployment
+`dpl_6JQ1m6J68zZyfwSfwWY1JmjaUC5Y` is ready; health, mascot module, cookie
+image and manifest return 200 and match the release. The live portfolio contains
+the new description. Production sign-in layout shows the cookie character;
+authenticated model requests were not exercised. The local server was restarted
+with the updated private configuration. No release blockers remain.
 Git history has not been rewritten.
 
 ## 2026-10-22 — Animated approved cookie avatar
