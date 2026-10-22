@@ -29,6 +29,11 @@ opening/closing, focus wrapping and Settings access. Restored the original
 Opus selection after checks. No chat/model call was made. Existing unrelated
 instruction and state edits remain unstaged.
 
+Released as `751092d` to `origin/main`. GitHub run `39720157346` passed.
+Production deployment `dpl_6EGjCReUx3PZfxcagsaNouU8CqKg` is ready. The live
+configuration serves all six versioned model labels and the deployed picker
+script matches the release. Local app remains running at port 4747.
+
 ## 2026-10-22 — Provider-neutral learning-project positioning
 
 Inspected `worktree-web-ui` at `1afe927`. Updated README, manifest, prompts,
