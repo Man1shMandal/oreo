@@ -414,12 +414,18 @@ $('#install').onclick = async () => {
   installPrompt.prompt(); await installPrompt.userChoice; installPrompt = null; $('#install').classList.add('hidden');
 };
 $('#ios-install-close').onclick = () => $('#ios-install').classList.add('hidden');
+function selectModel(value) {
+  const select = $('#model');
+  select.value = value;
+  if (!select.value) select.value = defaultModel;
+}
+
 async function show(session) {
   const next = session?.user.id || null;
   document.body.classList.toggle('signed-out', !next); $('#auth').classList.toggle('hidden', !!next); stage.classList.toggle('hidden', !next); $('.compose-wrap').classList.toggle('hidden', !next);
   $('#who').textContent = session?.user.email || '';
   if (next !== user) {
-    ++epoch; user = next; ready = false; loading = false; chatId = null; rows = []; conversations = []; loadPreferences(next, defaultModel); $('#send-hint').textContent = preferences.enter ? 'Enter to send · Shift + Enter for a new line' : 'Click the arrow to send · Enter for a new line'; $('#model').value = preferences.model || defaultModel; $('#settings').close(); resetDraft(); render(); renderSidebar(); notify('');
+    ++epoch; user = next; ready = false; loading = false; chatId = null; rows = []; conversations = []; loadPreferences(next, defaultModel); $('#send-hint').textContent = preferences.enter ? 'Enter to send · Shift + Enter for a new line' : 'Click the arrow to send · Enter for a new line'; selectModel(preferences.model || defaultModel); $('#settings').close(); resetDraft(); render(); renderSidebar(); notify('');
     if (next) { notify('Loading your chats…'); try { await account(); notify(''); } catch (error) { notify(error.message); } }
   }
   controls();
@@ -428,13 +434,12 @@ controls();
 try {
   const response = await fetch('/api/config'); if (!response.ok) throw new Error('Could not load Oreo. Please refresh.');
   const config = await response.json(); if (!config.supabaseUrl || !config.supabasePublishableKey) throw new Error('Sign-in is not configured.');
-  const compactModelNames = { opus: 'Opus', sonnet5: 'Sonnet 5', sonnet: 'Sonnet', haiku: 'Haiku', gpt: 'GPT', gemini: 'Gemini' };
-  for (const [label, id] of Object.entries(config.models)) $('#model').add(new Option(compactModelNames[label] || config.modelLabels?.[label] || label, id));
+  for (const [label, id] of Object.entries(config.models)) $('#model').add(new Option(config.modelLabels?.[label] || label, id));
   defaultModel = config.defaultModel;
-  $('#model').value = defaultModel;
+  selectModel(defaultModel);
   for (const [label, id] of Object.entries(config.models)) $('#s-model').add(new Option(config.modelLabels?.[label] || label, id));
   installSettings((value, saved) => {
-    $('#model').value = value.model; web = value.web; syncWebButton();
+    selectModel(value.model); web = value.web; syncWebButton();
     $('#send-hint').textContent = value.enter ? 'Enter to send · Shift + Enter for a new line' : 'Click the arrow to send · Enter for a new line';
     notify(saved ? 'Settings saved.' : 'Settings apply to this session. This browser could not save them.');
   });

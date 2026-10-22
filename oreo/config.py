@@ -28,6 +28,14 @@ MODELS = {
     "gpt": "gpt-6-luna",
     "gemini": "gemini-3.8-flash",
 }
+MODEL_LABELS = {
+    "opus": "Claude Opus 5.5 · Deep reasoning",
+    "sonnet5": "Claude Sonnet 5 · Advanced",
+    "sonnet": "Claude Sonnet 4.6 · Balanced",
+    "haiku": "Claude Haiku 4.5 · Fast",
+    "gpt": "GPT-6 Luna · Fast",
+    "gemini": "Gemini 3.8 Flash · Fast",
+}
 DEFAULT_MODEL = "sonnet"
 
 DEFAULTS = {"temperature": 0.7, "max_tokens": 1024}   # sent to the API with every request

@@ -212,7 +212,7 @@ class HostedChatTests(unittest.TestCase):
         from api.config import HOSTED_DEFAULT_MODEL, MODEL_LABELS
         from oreo.config import MODELS
         self.assertEqual(MODELS[HOSTED_DEFAULT_MODEL], 'claude-4.5-haiku')
-        self.assertEqual(MODEL_LABELS['sonnet'], 'Sonnet · Balanced')
+        self.assertEqual(MODEL_LABELS['sonnet'], 'Claude Sonnet 4.6 · Balanced')
         self.assertIn('claude-4.6-sonnet', MODELS.values())
 
     def test_warm_provider_client_is_reused(self):

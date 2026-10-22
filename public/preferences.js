@@ -25,6 +25,7 @@ export function loadPreferences(user, model) {
 }
 function fill(value) {
   $('#s-instructions').value = value.instructions; $('#s-model').value = value.model;
+  if (!$('#s-model').value) $('#s-model').value = defaultModel;
   $('#s-style').value = value.reply_style; $('#s-context').value = value.context;
   $('#s-temperature').value = value.temperature; $('#s-temperature-value').value = Number(value.temperature).toFixed(1);
   $('#s-files').checked = value.reuse_files; $('#s-web').checked = value.web; $('#s-enter').checked = value.enter;
