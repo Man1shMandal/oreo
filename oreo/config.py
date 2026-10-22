@@ -1,7 +1,22 @@
 """Models, defaults and Oreo's personality. Edit freely."""
 
-BASE_URL = "https://api.abby.abb.com/api/v1/developers"
-KEYCHAIN_SERVICE = "abby-ai-api"   # same entry Check Usage.command uses
+import json
+import os
+from pathlib import Path
+
+
+def provider_setting(name, default=""):
+    """Read deployment overrides or private local provider configuration."""
+    variable = {"base_url": "OREO_API_BASE_URL", "usage_header": "OREO_USAGE_HEADER",
+                "keychain_service": "OREO_KEYCHAIN_SERVICE"}[name]
+    if variable in os.environ:
+        return os.environ[variable]
+    path = Path.home() / ".oreo" / "provider.json"
+    return json.loads(path.read_text()).get(name, default) if path.exists() else default
+
+
+BASE_URL = provider_setting("base_url")
+KEYCHAIN_SERVICE = provider_setting("keychain_service", "oreo-api")
 KEYCHAIN_ACCOUNT = "usage"
 
 # short name -> API model id

@@ -1,6 +1,6 @@
 """Files uploaded from the browser: documents become text, images are kept for the model to see.
 
-The ABB gateway only takes pictures as a PDF in an `input_file` part, and only Claude models read
+The provider gateway only takes pictures as a PDF in an `input_file` part, and only Claude models read
 them, so images are wrapped in a one-page PDF and scanned PDFs are sent as they are."""
 
 import base64

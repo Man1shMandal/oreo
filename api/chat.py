@@ -25,7 +25,10 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 
 @lru_cache(maxsize=2)
 def provider_client(api_key):
-    return OpenAI(api_key=api_key, base_url="https://api.abby.abb.com/api/v1/developers",
+    base_url = config.provider_setting("base_url")
+    if not base_url:
+        raise ValueError("Set OREO_API_BASE_URL in server configuration.")
+    return OpenAI(api_key=api_key, base_url=base_url,
                   timeout=60, max_retries=0)
 
 
@@ -156,7 +159,7 @@ class handler(BaseHTTPRequestHandler):
             model = payload.get("model") if payload.get("model") in config.MODELS.values() else config.MODELS[HOSTED_DEFAULT_MODEL]
             if any(isinstance(m["content"], list) for m in messages) and not model.startswith("claude"):
                 model = config.VISION_MODEL
-            client = provider_client(os.environ["ABBY_API_KEY"])
+            client = provider_client(os.environ["OREO_API_KEY"])
             reply = ""
             for attempt in range(3):
                 self.event({"status": "Waiting for the model…" if attempt == 0

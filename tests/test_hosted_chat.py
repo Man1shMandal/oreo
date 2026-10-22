@@ -21,7 +21,7 @@ CHAT = "00000000-0000-0000-0000-000000000002"
 class HostedChatTests(unittest.TestCase):
     def setUp(self):
         self.env = patch.dict(os.environ, {
-            'SUPABASE_PUBLISHABLE_KEY': 'test', 'SUPABASE_SECRET_KEY': 'test', 'ABBY_API_KEY': 'test',
+            'SUPABASE_PUBLISHABLE_KEY': 'test', 'SUPABASE_SECRET_KEY': 'test', 'OREO_API_KEY': 'test', 'OREO_API_BASE_URL': 'https://models.example.test/v1',
         })
         self.env.start()
         self.server = HTTPServer(('127.0.0.1', 0), handler)

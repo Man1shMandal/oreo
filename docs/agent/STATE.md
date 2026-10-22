@@ -1,5 +1,40 @@
 # Oreo handoff state
 
+## 2026-10-22 — Provider-neutral learning-project positioning
+
+Inspected `worktree-web-ui` at `1afe927`. Updated README, manifest, prompts,
+comments and historical working notes to describe Oreo as a learning project
+for a capable agent-powered chat interface. Removed supplier naming from the
+current source tree. Model URL, usage header and existing Keychain mapping
+now use private local configuration or neutral environment variables. Preserved
+the local connection configuration in `~/.oreo/provider.json` outside Git.
+Added tests for private settings, environment precedence, missing endpoint,
+and usage authentication. GitHub repository description is updated. Portfolio
+copy was pushed to `Man1shMandal/Manish.engineer` at `f7bb0cd`.
+
+Validation: 81 Python tests, 6 Node tests, Python compilation, mascot syntax,
+and diff whitespace checks pass. Portfolio browser layout verified. Existing
+unrelated instruction and state changes remain unstaged. The user explicitly approved the production credential migration after automatic
+approval review requested it. Neutral production variables are configured and
+the protected temporary export was deleted. Oreo release verification follows.
+Git history has not been rewritten.
+
+## 2026-10-22 — Animated approved cookie avatar
+
+Inspected `worktree-web-ui` at `1afe927`. Replaced the displayed anime portrait
+with the user-approved transparent cookie character (`mascot-cookie.webp`).
+The shared custom element uses clipped illustration features for periodic
+blinks and a gently changing smile, with typing, thinking and reply-completion
+reactions. Reduced-motion users get a static character. Added the new asset to
+local and hosted routes and bumped the offline cache to v15. The older portrait
+asset remains available. Local-only self-contained preview: `output/oreo-avatar-preview.html`.
+
+Validation: 78 Python tests and 6 Node tests pass; mascot/service-worker syntax,
+Python compilation and `git diff --check` pass. Browser inspected the hosted
+sign-in avatar and enlarged idle/listening/thinking/happy states, including a
+paused closed-eye blink frame. No signed-in chat or production deployment was
+performed. Existing unrelated instruction and state changes were preserved.
+
 ## 2026-10-09 — Integrate voice-hold branch
 
 Inspected `origin/main` at `d3c706f` and Prashant's
@@ -69,7 +104,7 @@ state and its workspace, serves the Code control, and rejects an untrusted Host
 with 403. Oreo Code list/context reads and an outside-workspace path rejection
 also pass. The local server was stopped after the check; no model call was made.
 
-Not covered: a signed-in production session, a real ABB model/search request,
+Not covered: a signed-in production session, a real provider model/search request,
 browser microphone permission or physical speech recognition, and mobile/PWA
 install interaction. Existing unrelated `AGENTS.md`, `.github/copilot-instructions.md`,
 `.venv`, and `GEMINI.md` workspace changes remain untouched.
@@ -266,7 +301,7 @@ manifest mismatch; `httpx` is now declared in both manifests and a parity test
 prevents recurrence.
 
 Continued audit: hosted browser defaults to Haiku for quick replies, model choices
-are named by speed/capability, and warm processes reuse the ABB provider client.
+are named by speed/capability, and warm processes reuse the model client.
 Sonnet remains selectable. Full check: 62 Python tests, 3 JavaScript behavior
 tests, JS syntax, Python compile and diff whitespace all pass. The local mock
 browser flow streams a long answer and answers a context-dependent follow-up.
@@ -409,7 +444,7 @@ syntax checks, Python compileall and git diff --check pass. New tests exercise
 stream retry, ordinary fallback, exhaustion, completion retry and browser reset.
 Browser preview verified desktop portrait, phone visibility at 390px with no
 horizontal overflow, Settings open/close, and simulated streamed answer recovery.
-The actual updated endpoint with live ABB provider and stubbed auth/storage
+The actual updated endpoint with live model gateway and stubbed auth/storage
 returned "Oreo works", done=true, and saved exactly once to the stub. No private
 chat was read or changed. Production /api/health returns ok; production browser
 shows sign-in, so authenticated production chat remains untested.

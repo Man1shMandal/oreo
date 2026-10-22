@@ -7,7 +7,7 @@ conversation data use Supabase. Every signed-in account can chat immediately.
 
 The hosted interface supports streaming, saved conversations, model selection,
 PDF/Word/text attachments, images, scanned PDFs, and optional web research.
-Images are resized in the browser and wrapped as PDF files for ABB's gateway.
+Images are resized in the browser and wrapped as PDF files for provider's gateway.
 Requests containing images use Claude when a non-Claude model was selected.
 Web results have citations; unavailable search results produce an explicit notice.
 
@@ -89,3 +89,9 @@ immediately. Provider generation and optional web search still affect latency.
 CI caches Python dependencies, cancels superseded runs on the same ref, and runs
 Python regressions plus JavaScript behavior and syntax checks. Mock HTTP servers
 use a short shutdown poll instead of waiting half a second after every test.
+
+Configure the model gateway with server-only `OREO_API_KEY` and
+`OREO_API_BASE_URL` environment variables in each deployment environment.
+Provider endpoints and credentials belong in deployment configuration, never
+in tracked source or browser configuration. Local optional usage requests also
+support `OREO_USAGE_HEADER`.

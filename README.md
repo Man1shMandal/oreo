@@ -1,6 +1,8 @@
 # Oreo
 
-An applied AI engineering initiative exploring how to build world-class intelligent systems, built on the latest LLMs.
+Oreo is my learning project: a chat interface powered by AI agents. I started it to learn how to build sophisticated, capable AI systems, because conversational agents bring together some of the hardest problems: reasoning, tool use, memory, research, and coordinating work.
+
+It runs on existing language models through a configurable API gateway. The work here is the interface, agent behavior, and supporting systems.
 
 ## Run
 
@@ -19,7 +21,7 @@ Or in the browser:
 
 It uses port 80 so the link has no port number, and falls back to 4747 if 80 is taken. The name `oreo.local` is announced with Bonjour while the server runs. Macs, iPhones and recent Windows and Android devices pick it up; on anything else, use the IP address it prints.
 
-Use the + button to attach PDFs, Word files, text and code files, or images. You can also drag them in or paste them. Documents are turned into text. Images and scanned PDFs are sent as PDF pages, the only way the ABB gateway takes pictures. Only Claude can see them, so a message with a picture always goes to Sonnet.
+Use the + button to attach PDFs, Word files, text and code files, or images. You can also drag them in or paste them. Documents are turned into text. Images and scanned PDFs are sent as PDF pages, the only way the provider gateway takes pictures. Only Claude can see them, so a message with a picture always goes to Sonnet.
 
 On the owner's Mac, **Oreo Code** is a local coding agent. It reads project guidance, inspects Git status and diffs, searches and edits files, creates, moves and deletes files, looks up public documentation, and runs project commands. It previews each change and asks before every file write, move, deletion, or command. Start `oreo web` from the project directory, or pass `--workspace /path/to/project`. Code mode is not available to LAN visitors or the hosted app.
 
@@ -29,7 +31,9 @@ Anyone on the same Wi-Fi can open the network link. Oreo asks each person their 
 
 Some things only work from a browser on this Mac (http://127.0.0.1:4747): settings, the API key, usage, `@file` attachments, your standing instructions, and the chats you share with the terminal. Names aren't passwords, so anyone on the network can type someone else's name and see that person's chats. Only use it on networks you trust.
 
-On first run Oreo asks for your API key and saves it to the macOS Keychain (the same entry `Check Usage.command` uses). `ABBY_API_KEY` overrides it if set.
+Set `OREO_API_BASE_URL` to your model gateway endpoint. On first run Oreo asks for your API key and saves it to the macOS Keychain under `oreo-api`. `OREO_API_KEY` overrides it if set.
+
+For existing installations, private connection settings can live in `~/.oreo/provider.json`: `base_url`, `keychain_service`, and `usage_header`. Keep this file outside Git. `OREO_KEYCHAIN_SERVICE` and `OREO_USAGE_HEADER` override those settings. The optional usage endpoint defaults to bearer authentication; set the usage header when your gateway requires another header.
 
 Type `/settings` to change the key, default model, temperature, reply length and standing instructions, or to test the connection. Settings are saved in `~/.oreo/settings.json`.
 

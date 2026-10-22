@@ -24,9 +24,9 @@ class Session:
         self.provider = provider or self.connect()
 
     def connect(self):
-        key = os.environ.get("ABBY_API_KEY") or settings.get_key()
+        key = os.environ.get("OREO_API_KEY") or settings.get_key()
         if not key:
-            self.out("[bold]Welcome to Oreo.[/] Paste your ABB API key to get started (starts with sk-).")
+            self.out("[bold]Welcome to Oreo.[/] Paste your provider API key to get started (starts with sk-).")
             key = commands.ask_key(self)
             if not key:
                 raise SystemExit("No key, no Oreo. Run oreo again when you have it.")

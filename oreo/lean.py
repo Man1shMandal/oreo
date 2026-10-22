@@ -12,7 +12,7 @@ FILE_BLOCK = re.compile(r'<file path="([^"]*)">\n(.*?)\n</file>', re.S)
 
 
 def tokens(text):
-    """Rough count (~4 chars per token). The ABB API doesn't report per-request usage."""
+    """Rough count (~4 chars per token). The provider API doesn't report per-request usage."""
     return len(text) // 4 + 1
 
 

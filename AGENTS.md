@@ -1,6 +1,6 @@
 # Oreo: notes for agents
 
-Oreo is Manish's personal AI chat app. It runs on the ABB "ABBY" AI API, which is OpenAI-compatible and serves Claude, GPT and Gemini. It has two thin front-ends, a terminal chat and a browser UI, over the same provider, storage and settings code. Read this before changing anything.
+Oreo is Manish's learning project: a chat interface for coordinating AI agents and exploring how to build sophisticated, capable AI systems. It runs on the configured model gateway, which is OpenAI-compatible and serves Claude, GPT and Gemini. It has two thin front-ends, a terminal chat and a browser UI, over the same provider, storage and settings code. Read this before changing anything.
 
 ## How Manish wants it built
 
@@ -51,9 +51,9 @@ oreo/cli.py, commands.py   terminal chat loop and slash commands
 - `trusted()` checks the Host and Origin headers, to block DNS rebinding and CSRF. Keep it when you add routes.
 - `research.public()` blocks fetching private or LAN addresses, so visitors can't make Oreo read the router or the Mac.
 
-## ABB gateway quirks (tested, important)
+## Model gateway quirks (tested, important)
 
-- Base URL: `https://api.abby.abb.com/api/v1/developers`. The key is in the Keychain under service `abby-ai-api`, account `usage`. `ABBY_API_KEY` overrides it. The limit is 20M tokens a month; `GET /usage` with header `X-ABBY-API-Key` reports use.
+- Base URL: `OREO_API_BASE_URL`. The key is in the privately configured Keychain service, account `usage`. `OREO_API_KEY` overrides it. The limit is 20M tokens a month; `GET /usage` with the privately configured usage header reports use.
 - The chat response's `usage` field is always empty, so token counts in the UI are estimates (about 4 characters per token).
 - **Images**: standard `image_url` parts fail on every model. The only format that works is `{"type": "input_file", "file_data": <plain base64 PDF>, "filename": "x.pdf"}`, and only Claude models can read it. So images are wrapped in a one-page PDF, and when a GPT or Gemini model is selected, messages with pictures switch to `VISION_MODEL` (Sonnet).
 - **Empty text parts are rejected**. A picture-only message needs placeholder text.
@@ -86,5 +86,5 @@ The goal is to run Oreo independently at a subdomain of Manish's domain, at zero
 - **Users**: multiple. New sign-ups wait for admin approval, there's a daily token cap per user, and admin is decided by email.
 - **API key**: a server-side Vercel secret only. It never goes to the browser, the database or git, and the web Settings has no key field.
 - **Storage**: `store.py` gets two interchangeable back ends, local files and Supabase. The terminal and Mac web keep working on files.
-- **Step 0, before building**: confirm that the ABB API, and DuckDuckGo, are reachable from Vercel. The ABB API may only accept company addresses, and DuckDuckGo often blocks cloud servers; the fallback is a free search API (Tavily or Brave). Also confirm ABB allows using the key from a public server.
+- **Step 0, before building**: confirm that the provider API, and DuckDuckGo, are reachable from Vercel. The provider API may only accept company addresses, and DuckDuckGo often blocks cloud servers; the fallback is a free search API (Tavily or Brave). Also confirm the model service permits hosted use.
 - **Waiting on Manish**: `npx vercel login`, the domain name, and later a Supabase account and a Google OAuth app.

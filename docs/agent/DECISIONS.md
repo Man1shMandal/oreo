@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-10-22 — Learning project and neutral provider configuration
+Describe Oreo as Manish's learning project: a chat interface powered by AI
+agents, exploring reasoning, tools, memory, research and coordination on top
+of existing language models. Keep supplier names out of tracked source and
+public copy. Endpoints, usage headers and existing Keychain service mappings
+live in private local settings or server environment variables. Use
+`OREO_API_KEY` and `OREO_API_BASE_URL` for deployment. Preserve Git history.
+
+## 2026-10-22 — Animated cookie character
+The user approved the round sandwich-cookie avatar and requested blinking and
+smiling. Supersedes the anime portrait: preserve the approved illustration as
+a transparent WebP and animate clipped eyes and mouth in the shared custom
+element. Use existing attentive, working, and celebrate classes in both apps,
+respect reduced motion, and include the asset in the offline shell.
+
 ## 2026-10-09 — Use an eye-first Oreo character
 Use a shared custom element for the hosted and local apps. The character is a
 compact pair of glossy blue eyes with refined lids and a small smile, inspired
@@ -45,7 +60,7 @@ longer controls eligibility. This keeps the existing database compatible without
 requiring another manual migration. Ownership and server-only writes remain.
 
 ## 2026-10-07 — Reserve a daily estimated chat budget on the server
-The ABB gateway omits actual usage. Hosted requests charge an estimate for
+The provider gateway omits actual usage. Hosted requests charge an estimate for
 the complete prompt and reserve the full 700-token response cap before a
 provider call. Failed calls keep their reservation. This bounds the app's
 estimated daily budget under concurrent requests, but does not claim exact
@@ -154,7 +169,7 @@ lavender-haired portrait, violet eyes, restrained animation, and reduced-motion
 support in local and hosted headers.
 
 ## 2026-10-15 — Recover empty streams with an ordinary completion
-Live ABB checks returned empty streamed Haiku answers but successful ordinary
+Live provider checks returned empty streamed Haiku answers but successful ordinary
 Haiku and Sonnet answers. After two empty streams, use one ordinary completion
 and deliver it through the existing SSE events. Bound each request to 60 seconds
 so three attempts fit the hosted function limit. Never retry a partial answer.

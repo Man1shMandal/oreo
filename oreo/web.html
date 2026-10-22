@@ -463,7 +463,7 @@ async function send() {
   if (!text && !pending.length) return;
   if (agentOn && pending.length) { alert("Remove attached files before using Oreo Code."); return; }
   if (!state.has_key) {
-    if (state.owner) return openSettings("Paste your ABB API key first (it starts with sk-).");
+    if (state.owner) return openSettings("Paste your provider API key first (it starts with sk-).");
     return alert("Oreo isn't set up yet. Ask the owner to add an API key.");
   }
   const files = pending; pending = []; showTray();
@@ -700,7 +700,7 @@ $("#who").onclick = async () => { await askName(); newChat(); };
   const id = location.hash.slice(1);
   if (id) await openChat(id).catch(newChat); else newChat();
   updateSend();
-  if (!state.has_key && state.owner) openSettings("Welcome to Oreo. Paste your ABB API key to get started.");
+  if (!state.has_key && state.owner) openSettings("Welcome to Oreo. Paste your provider API key to get started.");
 })();
 </script>
 </body>
