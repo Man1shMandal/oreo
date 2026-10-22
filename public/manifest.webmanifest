@@ -1,7 +1,7 @@
 {
   "name": "Oreo",
   "short_name": "Oreo",
-  "description": "An applied AI engineering initiative, built on the latest LLMs.",
+  "description": "A chat interface for exploring capable AI agents, built as a learning project.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
