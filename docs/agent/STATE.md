@@ -1,5 +1,17 @@
 # Oreo handoff state
 
+## 2026-10-22 — Keep the avatar visible without animation startup
+
+Inspected `worktree-web-ui` at `5a85584`. Live sign-in displayed the character;
+the live script and image returned 200 with no browser errors. The reported
+browser/sign-in state was not yet specified, so the original disappearance
+was not reproduced. Added a native HTML image beneath the animated SVG layers,
+native fallback images inside each local/hosted custom element, and a separate
+mascot module entry independent of chat's external dependencies. Bumped offline
+cache to v17. Reloaded local mobile layout displays the character and tagline.
+Validation: 81 Python and 10 Node tests pass, JS syntax and diff checks pass.
+No model calls. Existing unrelated workspace changes remain unstaged.
+
 ## 2026-10-22 — Capability tagline
 
 Inspected `worktree-web-ui` at `751092d`. Replaced the understated sign-in

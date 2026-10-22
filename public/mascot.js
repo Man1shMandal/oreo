@@ -19,8 +19,9 @@ class OreoMascot extends HTMLElement {
       <path class="closed-eye" d="M${x-rx*.7} ${y} Q${x} ${y+22} ${x+rx*.7} ${y-6}"/>`;
     root.innerHTML = `<style>
       :host { display:block; width:100%; height:100%; }
-      svg { display:block; width:100%; height:100%; overflow:visible; }
-      .cookie { transform-origin:50% 65%; animation:float 5s ease-in-out infinite; }
+      svg { position:absolute; inset:0; display:block; width:100%; height:100%; overflow:visible; }
+      .portrait { display:block; width:100%; height:100%; object-fit:contain; }
+      .cookie { position:relative; width:100%; height:100%; transform-origin:50% 65%; animation:float 5s ease-in-out infinite; }
       .eye { animation:blink 5.7s ease-in-out infinite; }
       .closed-eye { fill:none; stroke:#211511; stroke-width:9; stroke-linecap:round;
         opacity:0; animation:lid 5.7s ease-in-out infinite; }
@@ -40,14 +41,12 @@ class OreoMascot extends HTMLElement {
       @media (prefers-reduced-motion: reduce) {
         .cookie, .eye, .closed-eye, .smile { animation:none!important; transition:none!important; transform:none!important; }
       }
-    </style><svg viewBox="0 0 1254 1254" aria-hidden="true" focusable="false">
+    </style><div class="cookie"><img class="portrait" src="/mascot-cookie.webp" alt="" width="1254" height="1254"><svg viewBox="0 0 1254 1254" aria-hidden="true" focusable="false">
       <defs><clipPath id="mouth"><rect x="653" y="646" width="207" height="68" rx="28"/></clipPath></defs>
-      <g class="cookie">${portrait}
         ${eye('left', 603, 565, 92, 96)}
         ${eye('right', 899, 551, 77, 96)}
         <g class="smile"><g clip-path="url(#mouth)">${portrait}</g></g>
-      </g>
-    </svg>`;
+    </svg></div>`;
   }
 }
 
