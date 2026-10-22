@@ -1,5 +1,12 @@
 # Oreo handoff state
 
+## 2026-10-22 — Capability tagline
+
+Inspected `worktree-web-ui` at `751092d`. Replaced the understated sign-in
+copy with “Chat. Code. Discover.” and used the same tagline on
+the local welcome screen. Checked the two rendered strings and diff whitespace.
+No behavior changes or model calls.
+
 ## 2026-10-22 — Complete model selection and local mobile navigation
 
 Inspected `worktree-web-ui` at `cee3315`. Shared readable model/version labels

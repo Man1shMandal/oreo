@@ -326,7 +326,7 @@ function addMsg(role, content, meta, images = [], sources = []) {
 }
 
 function showEmpty() {
-  $("#msgs").innerHTML = `<div class="empty"><b>Hey ${esc(me.split(" ")[0])}.</b>What are we working on?</div>`;
+  $("#msgs").innerHTML = `<div class="empty"><b>Hey ${esc(me.split(" ")[0])}.</b>Chat. Code. Discover.</div>`;
 }
 
 const atBottom = () => { const l = $("#log"); return l.scrollHeight - l.scrollTop - l.clientHeight < 80; };
