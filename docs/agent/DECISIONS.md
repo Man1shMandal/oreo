@@ -1,5 +1,9 @@
 # Decisions
 
+## 2026-10-22 — Direct capability tagline
+Use “Chat. Code. Discover.” for the sign-in and local welcome
+tagline. Avoid describing Oreo as “a simple” product in public copy.
+
 ## 2026-10-22 — Learning project and neutral provider configuration
 Describe Oreo as Manish's learning project: a chat interface powered by AI
 agents, exploring reasoning, tools, memory, research and coordination on top
