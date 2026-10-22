@@ -1,5 +1,27 @@
 # Oreo handoff state
 
+## 2026-10-22 — Complete model selection and local mobile navigation
+
+Inspected `worktree-web-ui` at `cee3315`. Shared readable model/version labels
+between local and hosted APIs, removed ambiguous picker shortcuts, and widened
+the hosted picker. Retired saved model IDs fall back to the default in local,
+hosted, and Settings pickers. Local selection is remembered per browser name,
+including default changes, and disabled during replies. Startup failure now
+shows a retry message instead of leaving blank controls.
+
+Added local mobile navigation for history/new chat/Settings, with a backdrop,
+Escape close, focus containment and inert background. Settings fields have
+associated labels and wrap within a scrolling phone-sized dialog. Composer
+controls have accessible names. Raised the hosted offline shell cache to v16.
+CI now runs all Node test files, including the picker regression cases.
+
+Validation: 81 Python tests and 10 Node tests pass, along with Python
+compilation, hosted/local JS syntax, and diff whitespace checks. Browser
+verified local selection across reloads, the 390px layout, mobile keyboard
+opening/closing, focus wrapping and Settings access. Restored the original
+Opus selection after checks. No chat/model call was made. Existing unrelated
+instruction and state edits remain unstaged.
+
 ## 2026-10-22 — Provider-neutral learning-project positioning
 
 Inspected `worktree-web-ui` at `1afe927`. Updated README, manifest, prompts,

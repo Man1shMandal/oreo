@@ -4,17 +4,10 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler
 
-from oreo.config import MODELS
+from oreo.config import MODELS, MODEL_LABELS
 
 HOSTED_DEFAULT_MODEL = "haiku"
-MODEL_LABELS = {
-    "opus": "Opus · Deep reasoning",
-    "sonnet5": "Sonnet · Advanced",
-    "sonnet": "Sonnet · Balanced",
-    "haiku": "Haiku · Fast",
-    "gpt": "GPT · Fast",
-    "gemini": "Gemini · Fast",
-}
+
 
 
 class handler(BaseHTTPRequestHandler):

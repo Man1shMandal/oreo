@@ -45,7 +45,7 @@ oreo-mascot.mobile-character { display: none; }
 .mobile-head oreo-mascot { width: 44px; height: 44px; }
 oreo-mascot.signin-character { width: 106px; height: 106px; }
 .top-actions { gap: 6px; }
-#model { max-width: 180px; padding: 7px 25px 7px 11px; border: 0; appearance: none; background: transparent; color: #d0d0d4; font-size: 12px; cursor: pointer; }
+#model { max-width: min(285px, 42vw); padding: 7px 25px 7px 11px; border: 0; appearance: none; background: transparent; color: #d0d0d4; font-size: 12px; cursor: pointer; }
 #model:hover, #model:focus { color: #fff; }
 #model option { background: #1c1c1e; color: #f5f5f7; }
 .model-picker { position: relative; display: inline-flex; align-items: center; min-height: 36px; padding-right: 3px; border: 1px solid #252528; border-radius: 9px; background: #101012; color: #b8b8bd; transition: background .16s ease, border-color .16s ease; }
@@ -149,7 +149,7 @@ textarea:focus-visible { outline: 0; }
   .mobile-menu { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; }
   .topbar #chat-title { display: none; }
   .top-actions { gap: 1px; }
-  #model { max-width: 130px; padding: 6px 22px 6px 9px; font-size: 11px; }
+  #model { max-width: min(210px, 46vw); padding: 6px 22px 6px 9px; font-size: 11px; }
   .model-picker { min-height: 34px; }
   #open-settings { width: 34px; height: 34px; }
   .timeline { width: calc(100% - 28px); padding-top: 24px; }
@@ -178,7 +178,7 @@ textarea:focus-visible { outline: 0; }
 }
 
 @media (max-width: 380px) {
-  #model { max-width: 105px; }
+  #model { max-width: 43vw; }
 }
 
 @media (prefers-reduced-motion: reduce) {

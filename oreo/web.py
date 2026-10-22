@@ -175,6 +175,7 @@ class Handler(BaseHTTPRequestHandler):
         keys = ("model", "temperature", "max_tokens", "context", "instructions") if self.owner else ("model",)
         self.send(200, {
             "models": config.MODELS,
+            "modelLabels": config.MODEL_LABELS,
             "settings": {k: st[k] for k in keys},
             "has_key": self.app.provider is not None,
             "owner": self.owner,
