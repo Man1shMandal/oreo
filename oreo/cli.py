@@ -18,6 +18,8 @@ class Session:
         self.console = Console(highlight=False)
         self.settings = settings.load()
         self.model = self.settings["model"]
+        if self.model not in config.MODELS.values():
+            self.model = self.settings["model"] = config.MODELS[config.DEFAULT_MODEL]
         self.params = {k: self.settings[k] for k in config.DEFAULTS}
         self.extra_system = ""
         self.chat = store.Chat()
@@ -58,12 +60,16 @@ class Session:
                     live.update(Markdown(reply))
         except KeyboardInterrupt:
             self.out("[dim](stopped)[/]")
+            if not reply.strip():
+                self.chat.messages.pop()
+                return
         except Exception as e:
             self.out(f"[red]{e}[/]")
             self.chat.messages.pop()
             return
         self.chat.messages.append({"role": "assistant", "content": reply})
-        self.out(f"[dim]{self.provider.last_model} · {lean.footer(info, msgs, reply)}[/]\n")
+        served = self.model if info.get("cached") else self.provider.last_model
+        self.out(f"[dim]{served} · {lean.footer(info, msgs, reply)}[/]\n")
         if lean.needs_compact(self.chat, self.settings["context"]):
             try:
                 lean.compact(self.provider, self.chat)
@@ -84,7 +90,12 @@ class Session:
 
 
 def main():
-    s = Session()
+    try:
+        s = Session()
+    except (EOFError, KeyboardInterrupt):
+        return
+    except ValueError as e:
+        raise SystemExit(str(e)) from None
     home = str(Path.cwd()).replace(str(Path.home()), "~")
     s.out(f"[bold]oreo[/] [dim]· {s.model} · {home} · /help for commands[/]\n")
     hist = Path.home() / ".oreo" / "history"
