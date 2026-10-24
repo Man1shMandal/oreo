@@ -1,6 +1,6 @@
 # Oreo: notes for agents
 
-Oreo is Manish's learning project: a chat interface for coordinating AI agents and exploring how to build sophisticated, capable AI systems. It runs on the configured model gateway, which is OpenAI-compatible and serves Claude, GPT and Gemini. It has two thin front-ends, a terminal chat and a browser UI, over the same provider, storage and settings code. Read this before changing anything.
+Oreo is Manish's learning project: a chat interface for coordinating AI agents and exploring how to build sophisticated, capable AI systems. It runs on the configured model gateway, which is OpenAI-compatible and serves Claude, GPT and Gemini. It has two thin front-ends, a terminal chat and a browser UI, over the same provider, storage and settings code. Read this before changing anything. Then read `docs/agent/STATE.md` for current work and `docs/agent/DECISIONS.md` for decisions. The current state supersedes historical plans below. Verify notes against Git and code.
 
 ## How Manish wants it built
 
@@ -75,9 +75,9 @@ Short persona prompt, about 1500 tokens of history per request, older turns fold
 - Repo: https://github.com/Man1shMandal/oreo (private). `main` is the current line of work.
 - Local work happens in the worktree `~/oreo/.claude/worktrees/web-ui` (branch `worktree-web-ui`, which tracks `origin/main` with `push.default=upstream`). Manish sometimes edits on GitHub, so fetch and rebase if a push is rejected. Never force-push.
 - Other local branches: `agent-mode` (tools: files, shell, web fetch, docs; text protocol for Claude) and `lightning-loader` (terminal loader). Neither has been pushed.
-- End commit messages with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Use accurate authorship when committing; do not attribute work to an AI that did not perform it.
 
-## Planned next: hosted version on Vercel (not started)
+## Hosted direction (historical plan; implementation has started)
 
 The goal is to run Oreo independently at a subdomain of Manish's domain, at zero cost.
 
@@ -88,3 +88,12 @@ The goal is to run Oreo independently at a subdomain of Manish's domain, at zero
 - **Storage**: `store.py` gets two interchangeable back ends, local files and Supabase. The terminal and Mac web keep working on files.
 - **Step 0, before building**: confirm that the provider API, and DuckDuckGo, are reachable from Vercel. The provider API may only accept company addresses, and DuckDuckGo often blocks cloud servers; the fallback is a free search API (Tavily or Brave). Also confirm the model service permits hosted use.
 - **Waiting on Manish**: `npx vercel login`, the domain name, and later a Supabase account and a Google OAuth app.
+
+## Portable handoff discipline
+
+- At the end of each task, update `docs/agent/STATE.md`: goal, work completed, exact checks and results, unfinished changes, blockers and next step. Date it and identify the branch/commit inspected.
+- Record enduring decisions and their reasons in `docs/agent/DECISIONS.md`. Keep credentials and private chat data out of both files.
+- Check `git status --short` and `git worktree list` before editing; preserve existing changes. Never assume the older `~/oreo` checkout is the active project.
+- The hosted code now lives in `api/`, `public/index.html`, and `supabase/migrations/`. Read those before applying the historical hosting plan.
+- `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` point agents to these shared instructions. Other AIs can read them manually.
+- A context packet can be generated locally with `agent-handoff packet oreo`. On another machine, use the repository files directly.

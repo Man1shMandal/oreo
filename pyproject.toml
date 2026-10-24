@@ -5,6 +5,8 @@ requires-python = ">=3.12"
 dependencies = [
   "openai==3.26.0",
   "httpx==0.28.1",
+  "rich==15.0.0",
+  "prompt-toolkit==3.0.53",
   "pillow==12.3.0",
   "pypdf==6.19.0",
   "python-docx==1.2.0",

@@ -1,5 +1,56 @@
 # Oreo handoff state
 
+## 2026-10-24 — Publish latest terminal fixes and outage handoff
+
+Reviewed `worktree-web-ui` at `9281b91`, up to date with `origin/main`.
+Prepared the terminal launcher, provider recovery, dependency, README and
+regression-test changes for release, together with shared agent instructions
+and pending handoff notes. The local `.venv` symlink stays untracked.
+Validation: 88 Python tests and 10 Node tests pass; Python compilation,
+all public JavaScript syntax checks and `git diff --check` pass.
+The production provider secret repair is already deployed separately.
+Release push, CI and deployment verification follow this entry.
+
+## 2026-10-24 — Repair hosted provider authentication outage
+
+Inspected `worktree-web-ui` at `9281b91`. Production runtime logs showed
+repeated model-service HTTP 401 responses while Supabase auth, profiles,
+conversation reads and chat lease RPCs succeeded. The existing local Keychain
+credential passed a tiny Haiku completion. Updated the existing production
+`OREO_API_KEY` secret from that verified credential without printing its value,
+then redeployed the existing production artifact (no source changes).
+Deployment `dpl_GzkW9HfHzA8JgLiaCoRiKc4AxzQ5` is Ready and attached to
+`oreo.manish.engineer`. The sign-in page loads. Authenticated end-to-end hosted
+chat remains unverified because the available browser is signed out. Next:
+retry a signed-in chat and confirm the provider no longer returns 401.
+Preserved unrelated changes, including edits that appeared concurrently in
+CLI/provider/dependency files. Temporary environment placeholder export removed.
+
+## 2026-10-24 — Repair the terminal CLI
+
+Inspected `worktree-web-ui` at `9281b91`. The installed
+`/opt/homebrew/bin/oreo` pointed to the older master checkout; repointed it to
+this worktree. The launcher now uses Python's safe-path option so a different
+checkout in the working directory cannot override its package. Preserved the
+working directory for attachments. Added the missing Rich and prompt-toolkit
+dependencies to both manifests and documented installation from a chosen checkout.
+
+The shared local provider now tries two streams then an ordinary completion,
+closes streams, discards whitespace-only attempts, and bounds SDK timeouts/retries.
+Partial answers are never replayed. Fixed the cached-first-answer crash, retired
+model fallback, cancelled credential setup traceback, and empty interrupted turns.
+
+Validation: all 88 Python tests pass (seven new terminal regression cases).
+The suite needs unsandboxed loopback access. Existing Keychain credentials are
+available outside the sandbox; no credential was displayed or changed. The
+installed command, launched from /private/tmp with isolated temporary history,
+returned “Oreo works” from Haiku and saved its chat, exiting with status 0.
+The final launcher regression verifies that another working-directory package
+cannot override the selected checkout. `git diff --check` passes. No production
+deployment or server restart. Changes remain uncommitted; preserved existing
+instruction/state changes and worktrees. Next step: use `oreo` in a normal terminal.
+
+
 ## 2026-10-22 — Keep the avatar visible without animation startup
 
 Inspected `worktree-web-ui` at `5a85584`. Live sign-in displayed the character;
@@ -478,6 +529,56 @@ Released in commit `854e876` to `origin/main`; GitHub verification run
 `37802179016` passed. Production serves the smile and idle styles, and
 `/api/health` returns ok.
 
+## 2026-10-11 — Ranjeet Drone demo agent
+
+Inspected active `worktree-web-ui` at `f266619`; existing unrelated changes in
+`AGENTS.md`, `.github/copilot-instructions.md`, `GEMINI.md`, and `.venv` were
+preserved. The requested Desktop folder name was ambiguous: no Runchev/Ranjeet
+folder exists, and the empty `~/Desktop/RajivDrone` folder was used. Added a
+standalone stdlib Python command-line chat agent and README there. It defines
+editable endpoint, API key, model, and temperature settings; supplies Ranjeet's
+quad-drone persona; and sends conversation history to an OpenAI-compatible chat
+completions endpoint. No API credentials were added.
+
+Validation: `python3 -m py_compile` succeeded. No API call was made because
+endpoint/model/key are intentionally blank. Remaining step: fill in settings
+and run `python3 ranjeet_drone.py`.
+
+## 2026-10-11 — Correct demo agent name
+
+Updated the Desktop demo agent from Ranjeet to Ranjiv, including the Python
+filename, persona and CLI text, README references, and setup instructions.
+Validation: Python compilation succeeded and a search found no stale old-name
+references in the demo folder. No API call was made.
+
+## 2026-10-11 — Support Anthropic Messages API
+
+After the user configured an Anthropic `/v1/messages` endpoint, updated the
+Ranjiv Drone client to send `anthropic-version` and `x-api-key` headers, use
+Anthropic's system/messages payload and parse its text content blocks. Kept an
+OpenAI-compatible chat completions path for other endpoints. Removed the key
+from the script and read it from `ANTHROPIC_API_KEY`; README documents setup.
+Python compilation succeeded. No API call made during this update.
+
+## 2026-10-11 — Review Ranjiv Drone code
+
+Reviewed the standalone Desktop agent and confirmed its local `.env` contains a
+non-empty key without printing it. Verified by mocked HTTP responses that the
+Anthropic Messages path sends the version and API key headers, expected model,
+temperature, system prompt and conversation, then extracts text. Also verified
+the OpenAI-compatible path sends bearer authorization and parses its response.
+Python compilation and a `/quit` CLI smoke check succeeded. No live API request
+was made; actual provider acceptance/model access remains unverified.
+
+## 2026-10-11 — Omit deprecated Anthropic temperature
+
+The configured Anthropic model rejected the `temperature` request field. The
+Anthropic payload now omits it and uses the provider default; the temperature
+setting remains active for OpenAI-compatible endpoints. Updated README guidance.
+Python compilation and a mocked Anthropic request check passed, including
+assertions that `anthropic-version` is present and temperature is absent. No
+live model call was made.
+
 ## 2026-10-15 — Empty-answer recovery and anime character
 
 Inspected worktree-web-ui at f266619, matching origin/main. Preserved existing
@@ -501,7 +602,12 @@ returned "Oreo works", done=true, and saved exactly once to the stub. No private
 chat was read or changed. Production /api/health returns ok; production browser
 shows sign-in, so authenticated production chat remains untested.
 
-Next: push this release and verify CI, deployment and public assets.
+Released as f1e8ac6 to origin/main. GitHub verification run 38684086757
+passed. Vercel reports Deployment has completed. Production chat.js, mascot.js,
+theme.css and sw.js byte-match the release; /api/health returns 200/ok and
+unauthenticated /api/chat returns 401. Live browser shows the new portrait on
+sign-in with no console errors. Authenticated production chat remains untested
+because the browser is signed out. Temporary preview stopped after verification.
 
 ## 2026-10-15 — Detailed adult anime portrait
 
@@ -518,7 +624,9 @@ Validation: 78 Python tests and 6 Node tests pass; JS syntax, Python compilation
 and diff whitespace checks pass. Browser preview verifies the image decodes at
 512px, transparency, desktop/390px phone appearance, and no missing portrait.
 No provider changes or model calls. Preserve unrelated instructions and earlier
-uncommitted state entries. Next: push and verify deployed portrait and CI.
+uncommitted state entries. Released as f92ac42 to origin/main. CI run 38684848953 passed and Vercel
+reports deployment complete. Production portrait, mascot.js, theme.css and
+sw.js match local bytes. Live sign-in view loads the 512px portrait correctly.
 
 ## 2026-10-17 — Project description
 

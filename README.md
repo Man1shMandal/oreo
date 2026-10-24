@@ -6,11 +6,15 @@ It runs on existing language models through a configurable API gateway. The work
 
 ## Run
 
-    ~/oreo/bin/oreo
+From the checkout you want to run:
+
+    python3 -m venv .venv
+    .venv/bin/python -m pip install -r requirements.txt
+    ./bin/oreo
 
 To get an `oreo` command everywhere:
 
-    ln -s ~/oreo/bin/oreo /opt/homebrew/bin/oreo
+    ln -sfn "$(pwd)/bin/oreo" /opt/homebrew/bin/oreo
 
 Or in the browser:
 
