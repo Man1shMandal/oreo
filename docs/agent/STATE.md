@@ -1,5 +1,20 @@
 # Oreo handoff state
 
+## 2026-10-24 — Animated terminal waiting indicator
+
+Inspected `worktree-web-ui` at `3545a98`. Added a compact cyan/blue light
+sweeping across a thin rail beside “Thinking…” and elapsed seconds. Rich's
+live refresh animates while the provider blocks; the first answer replaces it.
+Empty errors and cancellations clear the indicator and restore the cursor.
+Memory summarization now has a separate cyan status spinner. Noninteractive
+output follows Rich's normal static rendering behavior.
+
+Validation: all seven CLI regression tests pass; fake delayed reply, failure
+and Ctrl-C flows with forced terminal rendering verify visible animation,
+Live cleanup, cursor restoration and saved-turn behavior. `git diff --check`
+passes. No model requests. Changes remain uncommitted; restart `oreo` to use.
+
+
 ## 2026-10-24 — Publish latest terminal fixes and outage handoff
 
 Reviewed `worktree-web-ui` at `9281b91`, up to date with `origin/main`.
@@ -640,3 +655,25 @@ label from assistant prompts and recorded the enduring wording preference in
 DECISIONS.md. Preserved existing unrelated instruction and state changes.
 Validation: JSON parsing, Python AST parsing, and git diff --check pass.
 No behavior changes or model calls.
+
+## 2026-10-24 — Release verification complete
+
+Pushed terminal fixes as `3545a98` and CI virtualenv setup as `cda3d8f`
+to `origin/main`. GitHub run `40104516853` passed all checks (88 Python,
+10 Node tests). Production deployment `dpl_5dgQiqZNFNfaLYtrxqgLo7aHmYmq`
+is Ready with `oreo.manish.engineer` attached. Live health, configuration,
+HTML and static assets return 200; chat.js, mascot.js and theme.css match
+local release bytes. Live updated provider returned “Oreo works”. Signed-in
+hosted chat remains unverified: available browser is signed out. Concurrent
+CLI/loading edits appeared after the release and remain untouched/uncommitted;
+this final verification note is local to avoid publishing ongoing work.
+
+## 2026-10-24 — Publish latest waiting indicator
+
+Reviewed `worktree-web-ui` at `cda3d8f`, matching freshly fetched `origin/main`.
+Prepared all pending source and handoff changes for commit and push to
+`origin/main`: animated terminal waiting indicator and memory-summary status.
+Validation: all 88 Python tests and 10 Node tests pass; Python compilation
+and `git diff --check` pass. Python HTTP tests required unsandboxed loopback.
+The local `.venv` symlink remains untracked. No model calls. Next step: push
+this release and verify the remote commit.

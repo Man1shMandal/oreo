@@ -11,6 +11,7 @@ from rich.markdown import Markdown
 
 from . import commands, config, files, lean, settings, store
 from .provider import Provider
+from .loading import Thinking
 
 
 class Session:
@@ -54,10 +55,15 @@ class Session:
         reply = ""
         self.out("")
         try:
-            with Live(Markdown(""), console=self.console, refresh_per_second=12, vertical_overflow="visible") as live:
-                for piece in lean.stream(self.provider, self.model, msgs, self.params, info):
-                    reply += piece
-                    live.update(Markdown(reply))
+            with Live(Thinking(), console=self.console, refresh_per_second=20, vertical_overflow="visible") as live:
+                try:
+                    for piece in lean.stream(self.provider, self.model, msgs, self.params, info):
+                        reply += piece
+                        if reply.strip():
+                            live.update(Markdown(reply))
+                finally:
+                    if not reply.strip():
+                        live.update("", refresh=True)
         except KeyboardInterrupt:
             self.out("[dim](stopped)[/]")
             if not reply.strip():
@@ -72,7 +78,8 @@ class Session:
         self.out(f"[dim]{served} · {lean.footer(info, msgs, reply)}[/]\n")
         if lean.needs_compact(self.chat, self.settings["context"]):
             try:
-                lean.compact(self.provider, self.chat)
+                with self.console.status("Updating memory…", spinner="dots", spinner_style="cyan"):
+                    lean.compact(self.provider, self.chat)
             except Exception as e:
                 self.out(f"[dim]couldn't summarize older messages: {e}[/]")
         self.chat.save()
