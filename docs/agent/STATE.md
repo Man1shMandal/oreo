@@ -9,7 +9,10 @@ and pending handoff notes. The local `.venv` symlink stays untracked.
 Validation: 88 Python tests and 10 Node tests pass; Python compilation,
 all public JavaScript syntax checks and `git diff --check` pass.
 The production provider secret repair is already deployed separately.
-Release push, CI and deployment verification follow this entry.
+Released as `3545a98`. Its deployment is Ready. CI exposed that the launcher
+regression requires the documented project virtualenv; updated CI to create
+`.venv` and use it for all Python checks. A live request through the updated
+provider returned “Oreo works”. Follow-up CI and deployment checks follow.
 
 ## 2026-10-24 — Repair hosted provider authentication outage
 
